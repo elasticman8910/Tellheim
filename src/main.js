@@ -5,6 +5,7 @@ import { AssetRegistry } from './assets.js';
 import { Inventory } from './inventory.js';
 import { Mining } from './mining.js';
 import { GameUI } from './ui.js';
+import { Crafting } from './crafting.js';
 
 class TemperateScene extends Phaser.Scene {
   constructor() { super('temperate'); }
@@ -27,8 +28,9 @@ class TemperateScene extends Phaser.Scene {
     this.map.create();
     this.player = new PlayerController(this, this.map, balance.player);
     this.inventory = new Inventory();
+    this.crafting = new Crafting(this.inventory, items);
     this.mining = new Mining(this.map, this.player, this.inventory, balance.mining);
-    this.ui = new GameUI(this, this.inventory, items, balance.ui);
+    this.ui = new GameUI(this, this.inventory, this.crafting, items, balance.ui);
     this.cameras.main.startFollow(this.player.sprite, true, 0.12, 0.12);
     this.cameras.main.setBackgroundColor('#202820');
 

@@ -66,13 +66,16 @@ export class Mining {
   startMining(tile, itemId) {
     const tileKey = `${tile.x},${tile.y}`;
     this.pending.add(tileKey);
-    console.log(`Mining started: ${itemId} at (${tile.x}, ${tile.y})`);
+    const ownsPickaxe = this.inventory.count('pickaxe') > 0;
+    const delay = this.settings.delayMilliseconds
+      * (ownsPickaxe ? this.settings.pickaxeDelayMultiplier : 1);
+    console.log(`Mining started: ${itemId} at (${tile.x}, ${tile.y}), delay ${delay}ms`);
     window.setTimeout(() => {
       this.pending.delete(tileKey);
       const minedItem = this.map.removeResource(tile.x, tile.y);
       if (!minedItem) return;
       this.inventory.add(minedItem);
       console.log(`Mining completed: ${minedItem} at (${tile.x}, ${tile.y})`);
-    }, this.settings.delayMilliseconds);
+    }, delay);
   }
 }

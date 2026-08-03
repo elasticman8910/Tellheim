@@ -15,7 +15,8 @@
   },
   "mining": {
     "delayMilliseconds": 450,
-    "maximumTileDistance": 1
+    "maximumTileDistance": 1,
+    "pickaxeDelayMultiplier": 0.5
   },
   "ui": {
     "touchTargetSize": 52,
