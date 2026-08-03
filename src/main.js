@@ -30,7 +30,7 @@ class TemperateScene extends Phaser.Scene {
     this.inventory = new Inventory(items);
     this.crafting = new Crafting(this.inventory, items);
     this.mining = new Mining(this.map, this.player, this.inventory, balance.mining);
-    this.ui = new GameUI(this, this.inventory, this.crafting, items, balance.ui);
+    this.ui = new GameUI(this, this.inventory, this.crafting, items, balance.ui, this.mining);
     this.cameras.main.startFollow(this.player.sprite, true, 0.12, 0.12);
     this.cameras.main.setBackgroundColor('#202820');
 
@@ -40,11 +40,14 @@ class TemperateScene extends Phaser.Scene {
       if (this.ui.open) return;
       const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const size = balance.map.tileSize;
-      const tile = { x: Math.floor(world.x / size), y: Math.floor(world.y / size) };
-      if (!this.mining.queueResource(tile)) {
-        this.mining.clearQueue();
-        this.player.moveTo(tile);
+      const resourceTile = this.mining.snappedResourceAt(world.x, world.y);
+      if (resourceTile) {
+        this.mining.resetQueue(resourceTile);
+        return;
       }
+      const tile = { x: Math.floor(world.x / size), y: Math.floor(world.y / size) };
+      this.mining.pauseQueue();
+      this.player.moveTo(tile);
     });
     console.log(`Tellheim booted: Temperate seed "${balance.map.seed}"`);
   }

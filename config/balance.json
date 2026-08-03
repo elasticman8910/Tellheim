@@ -17,6 +17,7 @@
     "delayMilliseconds": 450,
     "maximumTileDistance": 1,
     "pickaxeDelayMultiplier": 0.5,
+    "tapSnapRadiusTiles": 0.6,
     "actionQueueLimit": 3,
     "queueMarkerPulseMilliseconds": 180,
     "queueMarkerPulseScale": 1.35
