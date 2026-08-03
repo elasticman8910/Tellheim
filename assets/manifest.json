@@ -23,21 +23,53 @@
     "width": 32,
     "height": 48
   },
-  "resourceStone": {
+  "itemStone": {
     "type": "generated",
     "color": "#e8e8f0",
     "width": 32,
     "height": 32
   },
-  "resourceCopper": {
+  "itemCopperOre": {
     "type": "generated",
     "color": "#ff7a32",
     "width": 32,
     "height": 32
   },
-  "resourceFiber": {
+  "itemPlantFiber": {
     "type": "generated",
     "color": "#6dff62",
+    "width": 32,
+    "height": 32
+  },
+  "itemWovenFiber": {
+    "type": "generated",
+    "color": "#20c97a",
+    "borderColor": "#d9ffe8",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
+  "itemCopperIngot": {
+    "type": "generated",
+    "color": "#c94f22",
+    "borderColor": "#ffd1b5",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
+  "itemStoneSlab": {
+    "type": "generated",
+    "color": "#a7a7bd",
+    "borderColor": "#ffffff",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
+  "itemPickaxe": {
+    "type": "generated",
+    "color": "#ffc247",
+    "borderColor": "#704b00",
+    "borderWidth": 3,
     "width": 32,
     "height": 32
   }

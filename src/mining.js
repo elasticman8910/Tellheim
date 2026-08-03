@@ -19,7 +19,7 @@ export class Mining {
     const tileKey = `${tile.x},${tile.y}`;
     if (this.pending.has(tileKey)) return true;
     if (distance <= this.settings.maximumTileDistance) {
-      this.startMining(tile, itemId);
+      this.startMining(tile);
       return true;
     }
 
@@ -60,13 +60,15 @@ export class Mining {
 
     const tile = this.approachTarget;
     this.approachTarget = null;
-    this.startMining(tile, itemId);
+    this.startMining(tile);
   }
 
-  startMining(tile, itemId) {
+  startMining(tile) {
     const tileKey = `${tile.x},${tile.y}`;
-    const tileType = this.map.resourceTypeAt(tile.x, tile.y);
-    console.log(`Mining tile resolution: ${tileType} -> ${itemId}`);
+    const itemId = this.map.resourceAt(tile.x, tile.y);
+    if (!itemId) return false;
+    // Console output is visible in Eruda and makes the tile-to-reward identity auditable.
+    console.log(`Mining tile-id ${tileKey} -> item-id ${itemId}`);
     this.pending.add(tileKey);
     const ownsPickaxe = this.inventory.count('pickaxe') > 0;
     const delay = this.settings.delayMilliseconds
@@ -79,5 +81,6 @@ export class Mining {
       this.inventory.add(minedItem);
       console.log(`Mining completed: ${minedItem} at (${tile.x}, ${tile.y})`);
     }, delay);
+    return true;
   }
 }

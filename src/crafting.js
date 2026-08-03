@@ -12,6 +12,11 @@ export class Crafting {
   }
 
   canCraft(recipe) {
+    const outputItem = this.items[recipe.output.itemId];
+    if (outputItem?.maxCount !== undefined
+      && this.inventory.count(outputItem.id) + recipe.output.quantity > outputItem.maxCount) {
+      return false;
+    }
     return recipe.ingredients.every(
       ({ itemId, quantity }) => this.inventory.count(itemId) >= quantity,
     );

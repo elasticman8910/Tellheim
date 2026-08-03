@@ -29,7 +29,9 @@ export class TemperateMap {
         const resource = canHoldResource && random.frac() < this.settings.resourceSpawnChance
           ? resourceIds[random.integerInRange(0, resourceIds.length - 1)]
           : null;
-        row.push({ terrain: type, resource });
+        // The tile owns the reward id. Its texture is presentation only and is
+        // never consulted when the tile is mined.
+        row.push({ terrain: type, resourceItemId: resource });
         this.scene.add.image(
           x * tileSize + tileSize / 2,
           y * tileSize + tileSize / 2,
@@ -56,23 +58,18 @@ export class TemperateMap {
   }
 
   resourceAt(x, y) {
-    const itemId = this.tiles[y]?.[x]?.resource;
+    const itemId = this.tiles[y]?.[x]?.resourceItemId;
     return itemId && this.items[itemId]?.mineable === true ? itemId : null;
-  }
-
-  resourceTypeAt(x, y) {
-    const itemId = this.resourceAt(x, y);
-    return itemId ? this.items[itemId]?.spriteKey || null : null;
   }
 
   removeResource(x, y) {
     const tile = this.tiles[y]?.[x];
-    if (!tile?.resource || this.items[tile.resource]?.mineable !== true) return null;
-    const resource = tile.resource;
-    tile.resource = null;
+    const itemId = tile?.resourceItemId;
+    if (!itemId || this.items[itemId]?.mineable !== true) return null;
+    tile.resourceItemId = null;
     this.resourceSprites.get(`${x},${y}`)?.destroy();
     this.resourceSprites.delete(`${x},${y}`);
-    return resource;
+    return itemId;
   }
 
   findWalkableStart() {
