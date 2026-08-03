@@ -64,6 +64,19 @@ assert.equal(reconciledInventory.count('pickaxe'), 13, 'pickaxes can be added re
 const crafting = new Crafting(reconciledInventory, items);
 assert.ok(crafting.recipes().some((item) => item.id === 'pickaxe'));
 
+// Queue controls stay stacked in the lower-right, separated by one full touch target.
+const positions = {};
+const positionButton = (name) => ({ setPosition(x, y) { positions[name] = { x, y }; } });
+GameUI.prototype.layout.call({
+  scene: { scale: { width: 390, height: 844, gameSize: { width: 390, height: 844 } } },
+  settings: { screenPadding: 16, touchTargetSize: 52 },
+  inventoryButton: positionButton('inventory'), craftButton: positionButton('craft'),
+  resumeButton: positionButton('resume'), clearQueueButton: positionButton('cancel'), open: false,
+});
+assert.deepEqual(positions.resume, { x: 274, y: 724 });
+assert.deepEqual(positions.cancel, { x: 322, y: 620 });
+assert.equal(positions.resume.y - (positions.cancel.y + 52), 52);
+
 // Queue commands retain tap order, replace only the newest waiting command, and
 // advance automatically each time the active mining timer finishes.
 const timers = [];
@@ -104,8 +117,11 @@ queuedMining.queueResource({ x: 2, y: 0 });
 queuedMining.queueResource({ x: 3, y: 0 });
 queuedMining.queueResource({ x: 4, y: 0 });
 assert.deepEqual(queuedMining.queue.map((entry) => entry.key), ['1,0', '2,0', '4,0']);
+assert.deepEqual(queuedMining.queue.map((entry) => entry.number), [1, 2, 3]);
 timers.shift()();
+assert.deepEqual(queuedMining.queue.map((entry) => entry.number), [1, 2]);
 timers.shift()();
+assert.deepEqual(queuedMining.queue.map((entry) => entry.number), [1]);
 timers.shift()();
 assert.equal(queuedMining.queue.length, 0);
 assert.deepEqual(queueInventory.counts, { stone: 2, copper: 1 });
