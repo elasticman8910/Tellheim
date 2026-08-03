@@ -145,7 +145,9 @@ let manualMove = null;
 const pausePlayer = {
   currentTile() { return pausePlayerTile; },
   moveTo(tile) { manualMove = tile; return true; },
-  moveToNearest(targets) { return targets.find((tile) => tile.x === 1 || tile.x === 3) || null; },
+  moveToNearest(targets) {
+    return targets.find((tile) => tile.x === 1 || tile.x === 3 || tile.x === 5) || null;
+  },
 };
 const pauseInventory = new Inventory(items);
 const pauseMining = new Mining(pauseMap, pausePlayer, pauseInventory, {
@@ -183,18 +185,47 @@ assert.deepEqual(pauseMining.queueContents(), []);
 assert.deepEqual(pauseInventory.counts, { fiber: 1, stone: 1 });
 assert.equal(resumeButton.visible, false, 'Resume stays hidden after queue completion');
 
-// A resource tap while paused discards the old queue and immediately activates the new one.
+// A paused two-target queue appends a single-tapped third resource, resumes at the
+// original target 1, and completes all three in their original order.
 pausedResources.set('2,0', 'fiber');
 pausedResources.set('4,0', 'stone');
+pausedResources.set('6,0', 'copper');
 pauseMining.queueResource({ x: 2, y: 0 });
+pauseMining.queueResource({ x: 4, y: 0 });
 pauseMining.pauseQueue();
-handleWorldTap(4.5 * 32, 0.5 * 32, 32, pauseMining, pausePlayer);
-assert.deepEqual(pauseMining.queueContents(), ['4,0']);
+handleWorldTap(6.5 * 32, 0.5 * 32, 32, pauseMining, pausePlayer, 1000);
+assert.deepEqual(pauseMining.queueContents(), ['2,0', '4,0', '6,0']);
 assert.equal(pauseMining.paused, false);
 assert.equal(resumeButton.visible, false);
-pauseMining.resetQueue({ x: 4, y: 0 });
-assert.deepEqual(pauseMining.queueContents(), ['4,0']);
-pauseMining.clearQueue();
+pausePlayerTile = { x: 1, y: 0 };
+pauseMining.update();
+finishNextPauseTimer();
+pausePlayerTile = { x: 3, y: 0 };
+pauseMining.update();
+finishNextPauseTimer();
+pausePlayerTile = { x: 5, y: 0 };
+pauseMining.update();
+finishNextPauseTimer();
+assert.deepEqual(pauseMining.queueContents(), []);
+assert.deepEqual(pauseInventory.counts, { fiber: 2, stone: 2, copper: 1 });
+
+// A same-tile double tap throws away both old targets and runs only the reset target 1.
+pausedResources.set('2,0', 'fiber');
+pausedResources.set('4,0', 'stone');
+pausedResources.set('6,0', 'copper');
+pauseMining.queueResource({ x: 2, y: 0 });
+pauseMining.queueResource({ x: 4, y: 0 });
+handleWorldTap(6.5 * 32, 0.5 * 32, 32, pauseMining, pausePlayer, 2000);
+handleWorldTap(6.5 * 32, 0.5 * 32, 32, pauseMining, pausePlayer, 2250);
+assert.deepEqual(pauseMining.queueContents(), ['6,0']);
+assert.equal(pauseMining.queue[0].number, 1);
+pausePlayerTile = { x: 5, y: 0 };
+pauseMining.update();
+finishNextPauseTimer();
+assert.deepEqual(pauseMining.queueContents(), []);
+
+pauseMining.queueResource({ x: 2, y: 0 });
+pauseMining.cancelQueue();
 assert.deepEqual(pauseMining.queueContents(), []);
 
 console.log(`Verified ${mineCount} isolated rewards for each of ${mineableItems.length} resource types.`);
