@@ -27,7 +27,7 @@ class TemperateScene extends Phaser.Scene {
     this.map = new TemperateMap(this, balance.map, items);
     this.map.create();
     this.player = new PlayerController(this, this.map, balance.player);
-    this.inventory = new Inventory();
+    this.inventory = new Inventory(items);
     this.crafting = new Crafting(this.inventory, items);
     this.mining = new Mining(this.map, this.player, this.inventory, balance.mining);
     this.ui = new GameUI(this, this.inventory, this.crafting, items, balance.ui);

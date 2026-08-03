@@ -14,6 +14,12 @@ export class AssetRegistry {
       const color = Phaser.Display.Color.HexStringToColor(asset.color).color;
       graphics.fillStyle(color, 1);
       graphics.fillRect(0, 0, asset.width, asset.height);
+      if (asset.borderColor && asset.borderWidth) {
+        const borderColor = Phaser.Display.Color.HexStringToColor(asset.borderColor).color;
+        graphics.lineStyle(asset.borderWidth, borderColor, 1);
+        const inset = asset.borderWidth / 2;
+        graphics.strokeRect(inset, inset, asset.width - asset.borderWidth, asset.height - asset.borderWidth);
+      }
       graphics.generateTexture(key, asset.width, asset.height);
       graphics.destroy();
     });
