@@ -31,6 +31,23 @@ export class PlayerController {
     return this.path.length > 0 || (this.currentTile().x === target.x && this.currentTile().y === target.y);
   }
 
+  moveToNearest(targets) {
+    const start = this.currentTile();
+    let best = null;
+
+    targets.forEach((target) => {
+      if (!this.map.isWalkable(target.x, target.y)) return;
+      const path = this.findPath(start, target);
+      const alreadyThere = start.x === target.x && start.y === target.y;
+      if (!path.length && !alreadyThere) return;
+      if (!best || path.length < best.path.length) best = { target, path };
+    });
+
+    if (!best) return null;
+    this.path = best.path;
+    return best.target;
+  }
+
   findPath(start, target) {
     const key = ({ x, y }) => `${x},${y}`;
     const queue = [start];

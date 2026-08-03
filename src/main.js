@@ -39,12 +39,18 @@ class TemperateScene extends Phaser.Scene {
       const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const size = balance.map.tileSize;
       const tile = { x: Math.floor(world.x / size), y: Math.floor(world.y / size) };
-      if (!this.mining.tryMine(tile)) this.player.moveTo(tile);
+      if (!this.mining.mineOrApproach(tile)) {
+        this.mining.cancelApproach();
+        this.player.moveTo(tile);
+      }
     });
     console.log(`Tellheim booted: Temperate seed "${balance.map.seed}"`);
   }
 
-  update() { this.player.update(); }
+  update() {
+    this.player.update();
+    this.mining.update();
+  }
 }
 
 const game = new Phaser.Game({
