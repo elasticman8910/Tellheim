@@ -28,7 +28,10 @@ export class GameUI {
       event.stopPropagation();
       this.showCrafting();
     });
-    this.resumeButton = this.makeQueueButton('Resume', '#3e6680', () => this.mining.resumeQueue());
+    this.resumeButton = this.makeQueueButton('Resume', '#3e6680', () => {
+      console.log('Queue resume-tapped');
+      this.mining.resumeQueue();
+    });
     this.clearQueueButton = this.makeQueueButton('\u2715', '#713d3d', () => this.mining.clearQueue());
     mining.onQueueChange((queue, paused) => this.updateQueueButtons(queue, paused));
     scene.scale.on('resize', () => this.layout());
@@ -54,7 +57,9 @@ export class GameUI {
   }
 
   updateQueueButtons(queue, paused) {
-    this.resumeButton.setVisible(queue.length > 0 && paused);
+    const showResume = queue.length > 0 && paused;
+    if (showResume && !this.resumeButton.visible) console.log('Queue resume-shown');
+    this.resumeButton.setVisible(showResume);
     this.clearQueueButton.setVisible(queue.length > 0);
   }
 
@@ -64,10 +69,13 @@ export class GameUI {
       this.scene.scale.width - this.settings.screenPadding - 120,
       this.settings.screenPadding,
     );
-    const bottom = this.scene.scale.height - this.settings.screenPadding - this.settings.touchTargetSize;
+    const width = this.scene.scale.gameSize?.width || this.scene.scale.width;
+    const height = this.scene.scale.gameSize?.height || this.scene.scale.height;
+    const bottom = height - this.settings.screenPadding - this.settings.touchTargetSize;
+    // Keep Resume fully inside a portrait viewport and clear of the right-side clear button.
     this.resumeButton.setPosition(this.settings.screenPadding, bottom);
     this.clearQueueButton.setPosition(
-      this.scene.scale.width - this.settings.screenPadding - this.settings.touchTargetSize,
+      width - this.settings.screenPadding - this.settings.touchTargetSize,
       bottom,
     );
     if (this.open === 'inventory') this.showInventory();

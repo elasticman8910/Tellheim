@@ -128,22 +128,24 @@ export class Mining {
   }
 
   pauseQueue() {
-    if (!this.queue.length || this.paused) return;
+    if (!this.queue.length || this.paused) return false;
     this.stopCurrent();
     this.paused = true;
     this.queue[0].state = 'waiting';
     this.queue.forEach((entry) => entry.marker?.setAlpha(0.45));
-    console.log(`Queue pause: [${this.queueContents().join(', ')}]`);
+    console.log(`Queue pause-entered: [${this.queueContents().join(', ')}]`);
     this.notifyQueueChange();
+    return true;
   }
 
   resumeQueue() {
-    if (!this.queue.length || !this.paused) return;
+    if (!this.queue.length || !this.paused) return false;
     this.paused = false;
     this.queue.forEach((entry) => entry.marker?.setAlpha(1));
     console.log(`Queue resume: [${this.queueContents().join(', ')}]`);
     this.startCurrent();
     this.notifyQueueChange();
+    return true;
   }
 
   clearQueue(log = true) {
@@ -206,7 +208,7 @@ export class Mining {
     this.queue.forEach((entry, index) => {
       entry.marker?.setText(String(index + 1));
     });
-    this.startCurrent();
+    if (!this.paused) this.startCurrent();
     this.notifyQueueChange();
   }
 
