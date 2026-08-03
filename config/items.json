@@ -3,18 +3,21 @@
     "id": "stone",
     "name": "Stone",
     "spriteKey": "resourceStone",
+    "mineable": true,
     "recipe": null
   },
   "copper": {
     "id": "copper",
     "name": "Copper Ore",
     "spriteKey": "resourceCopper",
+    "mineable": true,
     "recipe": null
   },
   "fiber": {
     "id": "fiber",
     "name": "Plant Fiber",
     "spriteKey": "resourceFiber",
+    "mineable": true,
     "recipe": null
   },
   "wovenFiber": {
@@ -54,6 +57,7 @@
     "id": "pickaxe",
     "name": "Pickaxe",
     "spriteKey": "resourceCopper",
+    "maxCount": 1,
     "recipe": {
       "ingredients": [
         { "itemId": "stone", "quantity": 3 },

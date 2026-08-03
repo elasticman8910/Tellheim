@@ -6,7 +6,9 @@ export class Crafting {
   }
 
   recipes() {
-    return Object.values(this.items).filter((item) => item.recipe);
+    return Object.values(this.items).filter((item) => (
+      item.recipe && (item.maxCount === undefined || this.inventory.count(item.id) < item.maxCount)
+    ));
   }
 
   canCraft(recipe) {

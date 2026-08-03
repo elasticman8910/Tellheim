@@ -65,6 +65,8 @@ export class Mining {
 
   startMining(tile, itemId) {
     const tileKey = `${tile.x},${tile.y}`;
+    const tileType = this.map.resourceTypeAt(tile.x, tile.y);
+    console.log(`Mining tile resolution: ${tileType} -> ${itemId}`);
     this.pending.add(tileKey);
     const ownsPickaxe = this.inventory.count('pickaxe') > 0;
     const delay = this.settings.delayMilliseconds
