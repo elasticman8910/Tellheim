@@ -1,9 +1,11 @@
 // Builds the same Temperate landscape every time from the configured text seed.
 export class TemperateMap {
-  constructor(scene, settings) {
+  constructor(scene, settings, items) {
     this.scene = scene;
     this.settings = settings;
+    this.items = items;
     this.tiles = [];
+    this.resourceSprites = new Map();
   }
 
   create() {
@@ -18,12 +20,25 @@ export class TemperateMap {
         const type = value >= this.settings.waterThreshold
           ? 'terrainWater'
           : value >= this.settings.soilThreshold ? 'terrainSoil' : 'terrainGrass';
-        row.push(type);
+        const canHoldResource = type !== 'terrainWater';
+        const resourceIds = Object.keys(this.items);
+        const resource = canHoldResource && random.frac() < this.settings.resourceSpawnChance
+          ? resourceIds[random.integerInRange(0, resourceIds.length - 1)]
+          : null;
+        row.push({ terrain: type, resource });
         this.scene.add.image(
           x * tileSize + tileSize / 2,
           y * tileSize + tileSize / 2,
           type,
         );
+        if (resource) {
+          const resourceSprite = this.scene.add.image(
+            x * tileSize + tileSize / 2,
+            y * tileSize + tileSize / 2,
+            this.items[resource].spriteKey,
+          ).setDepth(1);
+          this.resourceSprites.set(`${x},${y}`, resourceSprite);
+        }
       }
       this.tiles.push(row);
     }
@@ -33,7 +48,21 @@ export class TemperateMap {
   }
 
   isWalkable(x, y) {
-    return Boolean(this.tiles[y]?.[x]) && this.tiles[y][x] !== 'terrainWater';
+    return Boolean(this.tiles[y]?.[x]) && this.tiles[y][x].terrain !== 'terrainWater';
+  }
+
+  resourceAt(x, y) {
+    return this.tiles[y]?.[x]?.resource || null;
+  }
+
+  removeResource(x, y) {
+    const tile = this.tiles[y]?.[x];
+    if (!tile?.resource) return null;
+    const resource = tile.resource;
+    tile.resource = null;
+    this.resourceSprites.get(`${x},${y}`)?.destroy();
+    this.resourceSprites.delete(`${x},${y}`);
+    return resource;
   }
 
   findWalkableStart() {

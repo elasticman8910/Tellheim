@@ -1,0 +1,20 @@
+{
+  "stone": {
+    "id": "stone",
+    "name": "Stone",
+    "spriteKey": "resourceStone",
+    "recipe": null
+  },
+  "copper": {
+    "id": "copper",
+    "name": "Copper Ore",
+    "spriteKey": "resourceCopper",
+    "recipe": null
+  },
+  "fiber": {
+    "id": "fiber",
+    "name": "Plant Fiber",
+    "spriteKey": "resourceFiber",
+    "recipe": null
+  }
+}
