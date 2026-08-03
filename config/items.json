@@ -16,5 +16,51 @@
     "name": "Plant Fiber",
     "spriteKey": "resourceFiber",
     "recipe": null
+  },
+  "wovenFiber": {
+    "id": "wovenFiber",
+    "name": "Woven Fiber",
+    "spriteKey": "resourceFiber",
+    "recipe": {
+      "ingredients": [
+        { "itemId": "fiber", "quantity": 3 }
+      ],
+      "output": { "itemId": "wovenFiber", "quantity": 1 }
+    }
+  },
+  "copperIngot": {
+    "id": "copperIngot",
+    "name": "Copper Ingot",
+    "spriteKey": "resourceCopper",
+    "recipe": {
+      "ingredients": [
+        { "itemId": "copper", "quantity": 2 }
+      ],
+      "output": { "itemId": "copperIngot", "quantity": 1 }
+    }
+  },
+  "stoneSlab": {
+    "id": "stoneSlab",
+    "name": "Stone Slab",
+    "spriteKey": "resourceStone",
+    "recipe": {
+      "ingredients": [
+        { "itemId": "stone", "quantity": 3 }
+      ],
+      "output": { "itemId": "stoneSlab", "quantity": 1 }
+    }
+  },
+  "pickaxe": {
+    "id": "pickaxe",
+    "name": "Pickaxe",
+    "spriteKey": "resourceCopper",
+    "recipe": {
+      "ingredients": [
+        { "itemId": "stone", "quantity": 3 },
+        { "itemId": "copper", "quantity": 2 },
+        { "itemId": "fiber", "quantity": 1 }
+      ],
+      "output": { "itemId": "pickaxe", "quantity": 1 }
+    }
   }
 }

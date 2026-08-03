@@ -11,6 +11,16 @@ export class Inventory {
     this.listeners.forEach((listener) => listener(this.counts));
   }
 
+  consume(ingredients) {
+    if (!ingredients.every(({ itemId, quantity }) => this.count(itemId) >= quantity)) return false;
+    ingredients.forEach(({ itemId, quantity }) => {
+      this.counts[itemId] -= quantity;
+    });
+    console.log('Inventory ingredients consumed');
+    this.listeners.forEach((listener) => listener(this.counts));
+    return true;
+  }
+
   count(itemId) {
     return this.counts[itemId] || 0;
   }
