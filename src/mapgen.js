@@ -11,6 +11,11 @@ export class TemperateMap {
   create() {
     const { widthInTiles, heightInTiles, tileSize, seed } = this.settings;
     const random = new Phaser.Math.RandomDataGenerator([seed]);
+    // This allowlist is shared by tile selection and sprite lookup, keeping the
+    // visible resource type tied to the exact item id mining will return.
+    const resourceIds = Object.values(this.items)
+      .filter((item) => item.mineable === true)
+      .map((item) => item.id);
 
     for (let y = 0; y < heightInTiles; y += 1) {
       const row = [];
@@ -21,7 +26,6 @@ export class TemperateMap {
           ? 'terrainWater'
           : value >= this.settings.soilThreshold ? 'terrainSoil' : 'terrainGrass';
         const canHoldResource = type !== 'terrainWater';
-        const resourceIds = Object.keys(this.items);
         const resource = canHoldResource && random.frac() < this.settings.resourceSpawnChance
           ? resourceIds[random.integerInRange(0, resourceIds.length - 1)]
           : null;
@@ -52,12 +56,18 @@ export class TemperateMap {
   }
 
   resourceAt(x, y) {
-    return this.tiles[y]?.[x]?.resource || null;
+    const itemId = this.tiles[y]?.[x]?.resource;
+    return itemId && this.items[itemId]?.mineable === true ? itemId : null;
+  }
+
+  resourceTypeAt(x, y) {
+    const itemId = this.resourceAt(x, y);
+    return itemId ? this.items[itemId]?.spriteKey || null : null;
   }
 
   removeResource(x, y) {
     const tile = this.tiles[y]?.[x];
-    if (!tile?.resource) return null;
+    if (!tile?.resource || this.items[tile.resource]?.mineable !== true) return null;
     const resource = tile.resource;
     tile.resource = null;
     this.resourceSprites.get(`${x},${y}`)?.destroy();
