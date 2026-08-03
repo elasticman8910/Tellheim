@@ -41,8 +41,8 @@ class TemperateScene extends Phaser.Scene {
       const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
       const size = balance.map.tileSize;
       const tile = { x: Math.floor(world.x / size), y: Math.floor(world.y / size) };
-      if (!this.mining.mineOrApproach(tile)) {
-        this.mining.cancelApproach();
+      if (!this.mining.queueResource(tile)) {
+        this.mining.clearQueue();
         this.player.moveTo(tile);
       }
     });
