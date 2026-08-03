@@ -1,0 +1,19 @@
+{
+  "map": {
+    "seed": "tellheim-temperate-01",
+    "widthInTiles": 32,
+    "heightInTiles": 48,
+    "tileSize": 32,
+    "soilThreshold": 0.48,
+    "waterThreshold": 0.73
+  },
+  "player": {
+    "width": 32,
+    "height": 48,
+    "moveSpeedPixelsPerSecond": 150
+  },
+  "debug": {
+    "cornerSizePixels": 72,
+    "tripleTapWindowMilliseconds": 650
+  }
+}
