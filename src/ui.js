@@ -70,13 +70,12 @@ export class GameUI {
     );
     const width = this.scene.scale.gameSize?.width || this.scene.scale.width;
     const height = this.scene.scale.gameSize?.height || this.scene.scale.height;
-    const bottom = height - this.settings.screenPadding - this.settings.touchTargetSize;
-    // Keep Resume fully inside a portrait viewport and clear of the right-side clear button.
-    this.resumeButton.setPosition(this.settings.screenPadding, bottom);
-    this.clearQueueButton.setPosition(
-      width - this.settings.screenPadding - this.settings.touchTargetSize,
-      bottom,
-    );
+    const buttonSize = this.settings.touchTargetSize;
+    const right = width - this.settings.screenPadding;
+    // Stack queue controls in right-thumb reach, with a full button-height safety gap.
+    const resumeY = height - this.settings.screenPadding - buttonSize * 2;
+    this.resumeButton.setPosition(right - 100, resumeY);
+    this.clearQueueButton.setPosition(right - buttonSize, resumeY - buttonSize * 2);
     if (this.open === 'inventory') this.showInventory();
     if (this.open === 'crafting') this.showCrafting();
   }

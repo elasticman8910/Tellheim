@@ -10,7 +10,6 @@ export class Mining {
     this.timer = null;
     this.paused = false;
     this.queueListeners = [];
-    this.nextTargetNumber = 1;
   }
 
   onQueueChange(listener) {
@@ -22,7 +21,16 @@ export class Mining {
   }
 
   notifyQueueChange() {
+    this.renumberQueueMarkers();
     this.queueListeners.forEach((listener) => listener(this.queue, this.paused));
+  }
+
+  // Marker labels always describe the queue as it looks now, not its original numbering.
+  renumberQueueMarkers() {
+    this.queue.forEach((entry, index) => {
+      entry.number = index + 1;
+      entry.marker?.setText(String(entry.number));
+    });
   }
 
   // A near miss still selects a resource when it falls within the configured radius.
@@ -77,9 +85,8 @@ export class Mining {
 
     const entry = {
       tile: { ...tile }, key: tileKey, state: 'waiting', marker: null,
-      number: this.nextTargetNumber,
+      number: this.queue.length + 1,
     };
-    this.nextTargetNumber += 1;
     this.queue.push(entry);
     this.createMarker(entry);
     console.log(`Queue add: ${itemId} at (${tile.x}, ${tile.y}), position ${this.queue.length}`);
@@ -159,7 +166,6 @@ export class Mining {
     this.queue.forEach((entry) => entry.marker?.destroy());
     this.queue = [];
     this.paused = false;
-    this.nextTargetNumber = 1;
     if (log) console.log(`Queue clear: [${contents.join(', ')}]`);
     this.notifyQueueChange();
   }
@@ -216,13 +222,13 @@ export class Mining {
     if (!expectedEntry || this.queue[0] !== expectedEntry) return;
     const completed = this.queue.shift();
     completed.marker?.destroy();
+    this.renumberQueueMarkers();
     const next = this.queue[0];
     if (next && !this.paused) {
       console.log(`Queue advance: completed ${completed.number} -> starting ${next.number}`);
       this.startCurrent();
     } else {
       console.log(`Queue complete: target ${completed.number} (${completed.key})`);
-      if (!next) this.nextTargetNumber = 1;
     }
     this.notifyQueueChange();
   }
