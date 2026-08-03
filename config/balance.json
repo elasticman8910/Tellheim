@@ -1,0 +1,29 @@
+{
+  "map": {
+    "seed": "tellheim-temperate-01",
+    "widthInTiles": 32,
+    "heightInTiles": 48,
+    "tileSize": 32,
+    "soilThreshold": 0.48,
+    "waterThreshold": 0.73,
+    "resourceSpawnChance": 0.08
+  },
+  "player": {
+    "width": 32,
+    "height": 48,
+    "moveSpeedPixelsPerSecond": 150
+  },
+  "mining": {
+    "delayMilliseconds": 450,
+    "maximumTileDistance": 1
+  },
+  "ui": {
+    "touchTargetSize": 52,
+    "screenPadding": 16,
+    "inventoryRowHeight": 64
+  },
+  "debug": {
+    "cornerSizePixels": 72,
+    "tripleTapWindowMilliseconds": 650
+  }
+}
