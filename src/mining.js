@@ -10,6 +10,7 @@ export class Mining {
     this.timer = null;
     this.paused = false;
     this.queueListeners = [];
+    this.nextTargetNumber = 1;
   }
 
   onQueueChange(listener) {
@@ -74,11 +75,15 @@ export class Mining {
       return true;
     }
 
-    const entry = { tile: { ...tile }, key: tileKey, state: 'waiting', marker: null };
+    const entry = {
+      tile: { ...tile }, key: tileKey, state: 'waiting', marker: null,
+      number: this.nextTargetNumber,
+    };
+    this.nextTargetNumber += 1;
     this.queue.push(entry);
     this.createMarker(entry);
     console.log(`Queue add: ${itemId} at (${tile.x}, ${tile.y}), position ${this.queue.length}`);
-    if (this.queue.length === 1) this.startCurrent();
+    if (this.queue.length === 1 && !this.paused) this.startCurrent();
     this.notifyQueueChange();
     return true;
   }
@@ -95,8 +100,8 @@ export class Mining {
     const playerTile = this.player.currentTile();
     const distance = Math.abs(playerTile.x - entry.tile.x) + Math.abs(playerTile.y - entry.tile.y);
     if (distance <= this.settings.maximumTileDistance) {
-      this.startMining(entry.tile, () => this.completeCurrent());
       entry.state = 'mining';
+      this.startMining(entry.tile, () => this.completeCurrent(entry));
       return;
     }
 
@@ -133,16 +138,16 @@ export class Mining {
     this.paused = true;
     this.queue[0].state = 'waiting';
     this.queue.forEach((entry) => entry.marker?.setAlpha(0.45));
-    console.log(`Queue pause-entered: [${this.queueContents().join(', ')}]`);
+    console.log(`Queue pause: [${this.queueContents().join(', ')}]`);
     this.notifyQueueChange();
     return true;
   }
 
-  resumeQueue() {
+  resumeQueue(source = 'resume-button') {
     if (!this.queue.length || !this.paused) return false;
     this.paused = false;
     this.queue.forEach((entry) => entry.marker?.setAlpha(1));
-    console.log(`Queue resume: [${this.queueContents().join(', ')}]`);
+    console.log(`Queue ${source}: [${this.queueContents().join(', ')}]`);
     this.startCurrent();
     this.notifyQueueChange();
     return true;
@@ -154,8 +159,14 @@ export class Mining {
     this.queue.forEach((entry) => entry.marker?.destroy());
     this.queue = [];
     this.paused = false;
+    this.nextTargetNumber = 1;
     if (log) console.log(`Queue clear: [${contents.join(', ')}]`);
     this.notifyQueueChange();
+  }
+
+  cancelQueue() {
+    console.log(`Queue cancel: [${this.queueContents().join(', ')}]`);
+    this.clearQueue(false);
   }
 
   update() {
@@ -163,7 +174,7 @@ export class Mining {
     if (!entry || entry.state !== 'approaching') return;
     const itemId = this.map.resourceAt(entry.tile.x, entry.tile.y);
     if (!itemId) {
-      this.completeCurrent();
+      this.completeCurrent(entry);
       return;
     }
 
@@ -173,7 +184,7 @@ export class Mining {
     if (distance > this.settings.maximumTileDistance) return;
 
     entry.state = 'mining';
-    this.startMining(entry.tile, () => this.completeCurrent());
+    this.startMining(entry.tile, () => this.completeCurrent(entry));
   }
 
   startMining(tile, onComplete = null) {
@@ -200,22 +211,26 @@ export class Mining {
     return true;
   }
 
-  completeCurrent() {
+  completeCurrent(expectedEntry = this.queue[0]) {
+    // Ignore a cancelled timer callback instead of completing a newer first target.
+    if (!expectedEntry || this.queue[0] !== expectedEntry) return;
     const completed = this.queue.shift();
-    if (!completed) return;
     completed.marker?.destroy();
-    console.log(`Queue complete: ${completed.key}`);
-    this.queue.forEach((entry, index) => {
-      entry.marker?.setText(String(index + 1));
-    });
-    if (!this.paused) this.startCurrent();
+    const next = this.queue[0];
+    if (next && !this.paused) {
+      console.log(`Queue advance: completed ${completed.number} -> starting ${next.number}`);
+      this.startCurrent();
+    } else {
+      console.log(`Queue complete: target ${completed.number} (${completed.key})`);
+      if (!next) this.nextTargetNumber = 1;
+    }
     this.notifyQueueChange();
   }
 
   createMarker(entry) {
     const scene = this.map.scene;
     if (!scene?.add?.text) return;
-    entry.marker = scene.add.text(0, 0, String(this.queue.length), {
+    entry.marker = scene.add.text(0, 0, String(entry.number), {
       backgroundColor: '#25333d', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '18px',
       fontStyle: 'bold', padding: { x: 6, y: 3 },
     }).setOrigin(0.5).setDepth(10);

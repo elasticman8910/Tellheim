@@ -29,10 +29,9 @@ export class GameUI {
       this.showCrafting();
     });
     this.resumeButton = this.makeQueueButton('Resume', '#3e6680', () => {
-      console.log('Queue resume-tapped');
-      this.mining.resumeQueue();
+      this.mining.resumeQueue('resume-button');
     });
-    this.clearQueueButton = this.makeQueueButton('\u2715', '#713d3d', () => this.mining.clearQueue());
+    this.clearQueueButton = this.makeQueueButton('\u2715', '#a32929', () => this.mining.cancelQueue());
     mining.onQueueChange((queue, paused) => this.updateQueueButtons(queue, paused));
     scene.scale.on('resize', () => this.layout());
     inventory.onChange(() => {
