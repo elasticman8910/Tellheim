@@ -6,6 +6,7 @@ import { Inventory } from './inventory.js';
 import { Mining } from './mining.js';
 import { GameUI } from './ui.js';
 import { Crafting } from './crafting.js';
+import { handleWorldTap } from './input.js';
 
 class TemperateScene extends Phaser.Scene {
   constructor() { super('temperate'); }
@@ -39,15 +40,7 @@ class TemperateScene extends Phaser.Scene {
       this.debugToggle.recordTap(pointer);
       if (this.ui.open) return;
       const world = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
-      const size = balance.map.tileSize;
-      const resourceTile = this.mining.snappedResourceAt(world.x, world.y);
-      if (resourceTile) {
-        this.mining.resetQueue(resourceTile);
-        return;
-      }
-      const tile = { x: Math.floor(world.x / size), y: Math.floor(world.y / size) };
-      this.mining.pauseQueue();
-      this.player.moveTo(tile);
+      handleWorldTap(world.x, world.y, balance.map.tileSize, this.mining, this.player);
     });
     console.log(`Tellheim booted: Temperate seed "${balance.map.seed}"`);
   }
