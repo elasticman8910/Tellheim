@@ -1,0 +1,26 @@
+{
+  "terrainGrass": {
+    "type": "generated",
+    "color": "#697d52",
+    "width": 32,
+    "height": 32
+  },
+  "terrainSoil": {
+    "type": "generated",
+    "color": "#7e6448",
+    "width": 32,
+    "height": 32
+  },
+  "terrainWater": {
+    "type": "generated",
+    "color": "#4a6f7b",
+    "width": 32,
+    "height": 32
+  },
+  "player": {
+    "type": "generated",
+    "color": "#becdd4",
+    "width": 32,
+    "height": 48
+  }
+}
