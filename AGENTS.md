@@ -54,7 +54,9 @@ by replacing files only.
 •
 Tile size: 32×32px. Character sprite: 32×48px. Stick to this grid everywhere.
 Placeholder color key: terrain = muted earth tones per biome, resources = saturated bright
-colors, base parts = grays/blues, hazards = red tint.CODE CONVENTIONS
+colors, base parts = grays/blues, hazards = red tint.
+All placeholder art is generated in code; never commit image or other binary files (the PR pipeline rejects binaries). Real art will be added later by the developer directly.
+CODE CONVENTIONS
 •
 Small files, one system per file: player.js, mining.js, oxygen.js, temperature.js,
 crafting.js, building.js, mapgen.js, extractor.js, ui.js.
