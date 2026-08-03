@@ -16,7 +16,10 @@
   "mining": {
     "delayMilliseconds": 450,
     "maximumTileDistance": 1,
-    "pickaxeDelayMultiplier": 0.5
+    "pickaxeDelayMultiplier": 0.5,
+    "actionQueueLimit": 3,
+    "queueMarkerPulseMilliseconds": 180,
+    "queueMarkerPulseScale": 1.35
   },
   "ui": {
     "touchTargetSize": 52,

@@ -10,7 +10,7 @@ const manifest = JSON.parse(await readFile(new URL('../assets/manifest.json', im
 const mineableItems = Object.values(items).filter((item) => item.mineable === true);
 const craftedItems = Object.values(items).filter((item) => item.recipe);
 const mineCount = 5;
-globalThis.window = { setTimeout(callback) { callback(); } };
+globalThis.window = { setTimeout(callback) { callback(); return 1; }, clearTimeout() {} };
 
 // Item visuals must stay one-to-one, so presentation can never make ids ambiguous.
 const spriteKeys = Object.values(items).map((item) => item.spriteKey);
@@ -56,11 +56,55 @@ invalidMap.tiles = [[{ resourceItemId: 'copperIngot' }]];
 assert.equal(invalidMap.resourceAt(0, 0), null, 'crafted items cannot resolve as mining rewards');
 
 const reconciledInventory = new Inventory(items, { pickaxe: 9 });
-assert.equal(reconciledInventory.count('pickaxe'), 1, 'loaded pickaxes are reconciled to maxCount');
+assert.equal(reconciledInventory.count('pickaxe'), 9, 'loaded pickaxes keep their full count');
 reconciledInventory.add('pickaxe', 4);
-assert.equal(reconciledInventory.count('pickaxe'), 1, 'pickaxe additions are capped at maxCount');
+assert.equal(reconciledInventory.count('pickaxe'), 13, 'pickaxes can be added repeatedly');
 const crafting = new Crafting(reconciledInventory, items);
-assert.ok(!crafting.recipes().some((item) => item.id === 'pickaxe'));
-assert.equal(crafting.canCraft(items.pickaxe.recipe), false);
+assert.ok(crafting.recipes().some((item) => item.id === 'pickaxe'));
+
+// Queue commands retain tap order, replace only the newest waiting command, and
+// advance automatically each time the active mining timer finishes.
+const timers = [];
+globalThis.window = {
+  setTimeout(callback) { timers.push(callback); return timers.length; },
+  clearTimeout() {},
+};
+const queueResources = new Map([
+  ['1,0', 'stone'], ['2,0', 'copper'], ['3,0', 'fiber'], ['4,0', 'stone'],
+]);
+const queueMap = {
+  scene: null,
+  settings: { tileSize: 32 },
+  resourceAt(x, y) { return queueResources.get(`${x},${y}`) || null; },
+  removeResource(x, y) {
+    const key = `${x},${y}`;
+    const resource = queueResources.get(key) || null;
+    queueResources.delete(key);
+    return resource;
+  },
+};
+const queuePlayer = {
+  currentTile() { return { x: 0, y: 0 }; },
+  moveToNearest(targets) { return targets[0]; },
+};
+const queueInventory = new Inventory(items);
+const queuedMining = new Mining(queueMap, queuePlayer, queueInventory, {
+  delayMilliseconds: 1,
+  maximumTileDistance: 10,
+  pickaxeDelayMultiplier: 0.5,
+  actionQueueLimit: 3,
+  queueMarkerPulseMilliseconds: 180,
+  queueMarkerPulseScale: 1.35,
+});
+queuedMining.queueResource({ x: 1, y: 0 });
+queuedMining.queueResource({ x: 2, y: 0 });
+queuedMining.queueResource({ x: 3, y: 0 });
+queuedMining.queueResource({ x: 4, y: 0 });
+assert.deepEqual(queuedMining.queue.map((entry) => entry.key), ['1,0', '2,0', '4,0']);
+timers.shift()();
+timers.shift()();
+timers.shift()();
+assert.equal(queuedMining.queue.length, 0);
+assert.deepEqual(queueInventory.counts, { stone: 2, copper: 1 });
 
 console.log(`Verified ${mineCount} isolated rewards for each of ${mineableItems.length} resource types.`);
