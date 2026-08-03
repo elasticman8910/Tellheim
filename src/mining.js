@@ -8,6 +8,46 @@ export class Mining {
     this.pending = new Set();
     this.queue = [];
     this.timer = null;
+    this.paused = false;
+    this.queueListeners = [];
+  }
+
+  onQueueChange(listener) {
+    this.queueListeners.push(listener);
+  }
+
+  queueContents() {
+    return this.queue.map((entry) => entry.key);
+  }
+
+  notifyQueueChange() {
+    this.queueListeners.forEach((listener) => listener(this.queue, this.paused));
+  }
+
+  // A near miss still selects a resource when it falls within the configured radius.
+  snappedResourceAt(worldX, worldY) {
+    const size = this.map.settings.tileSize;
+    const tapX = worldX / size;
+    const tapY = worldY / size;
+    const radius = this.settings.tapSnapRadiusTiles;
+    let nearest = null;
+    for (let y = Math.floor(tapY - radius); y <= Math.floor(tapY + radius); y += 1) {
+      for (let x = Math.floor(tapX - radius); x <= Math.floor(tapX + radius); x += 1) {
+        if (!this.map.resourceAt(x, y)) continue;
+        const distance = Math.hypot(tapX - (x + 0.5), tapY - (y + 0.5));
+        if (distance <= radius && (!nearest || distance < nearest.distance)) {
+          nearest = { x, y, distance };
+        }
+      }
+    }
+    return nearest ? { x: nearest.x, y: nearest.y } : null;
+  }
+
+  resetQueue(tile) {
+    const oldContents = this.queueContents();
+    this.clearQueue(false);
+    console.log(`Queue reset: [${oldContents.join(', ')}] -> [${tile.x},${tile.y}]`);
+    this.queueResource(tile);
   }
 
   queueResource(tile) {
@@ -30,6 +70,7 @@ export class Mining {
       this.positionMarker(entry);
       this.pulseMarker(entry);
       console.log(`Queue replace: ${oldKey} -> ${tileKey} at position ${replaceIndex + 1}`);
+      this.notifyQueueChange();
       return true;
     }
 
@@ -38,6 +79,7 @@ export class Mining {
     this.createMarker(entry);
     console.log(`Queue add: ${itemId} at (${tile.x}, ${tile.y}), position ${this.queue.length}`);
     if (this.queue.length === 1) this.startCurrent();
+    this.notifyQueueChange();
     return true;
   }
 
@@ -77,15 +119,41 @@ export class Mining {
     console.log(`Moving to mine ${itemId} at (${tile.x}, ${tile.y})`);
   }
 
-  clearQueue() {
+  stopCurrent() {
     if (this.timer !== null) {
       window.clearTimeout(this.timer);
       this.timer = null;
     }
     this.pending.clear();
+  }
+
+  pauseQueue() {
+    if (!this.queue.length || this.paused) return;
+    this.stopCurrent();
+    this.paused = true;
+    this.queue[0].state = 'waiting';
+    this.queue.forEach((entry) => entry.marker?.setAlpha(0.45));
+    console.log(`Queue pause: [${this.queueContents().join(', ')}]`);
+    this.notifyQueueChange();
+  }
+
+  resumeQueue() {
+    if (!this.queue.length || !this.paused) return;
+    this.paused = false;
+    this.queue.forEach((entry) => entry.marker?.setAlpha(1));
+    console.log(`Queue resume: [${this.queueContents().join(', ')}]`);
+    this.startCurrent();
+    this.notifyQueueChange();
+  }
+
+  clearQueue(log = true) {
+    const contents = this.queueContents();
+    this.stopCurrent();
     this.queue.forEach((entry) => entry.marker?.destroy());
     this.queue = [];
-    console.log('Queue clear');
+    this.paused = false;
+    if (log) console.log(`Queue clear: [${contents.join(', ')}]`);
+    this.notifyQueueChange();
   }
 
   update() {
@@ -139,6 +207,7 @@ export class Mining {
       entry.marker?.setText(String(index + 1));
     });
     this.startCurrent();
+    this.notifyQueueChange();
   }
 
   createMarker(entry) {

@@ -93,6 +93,7 @@ const queuedMining = new Mining(queueMap, queuePlayer, queueInventory, {
   maximumTileDistance: 10,
   pickaxeDelayMultiplier: 0.5,
   actionQueueLimit: 3,
+  tapSnapRadiusTiles: 0.6,
   queueMarkerPulseMilliseconds: 180,
   queueMarkerPulseScale: 1.35,
 });
@@ -106,5 +107,38 @@ timers.shift()();
 timers.shift()();
 assert.equal(queuedMining.queue.length, 0);
 assert.deepEqual(queueInventory.counts, { stone: 2, copper: 1 });
+
+// Near-miss taps snap to the closest resource, while taps beyond the configured radius do not.
+queueResources.set('2,2', 'fiber');
+assert.deepEqual(queuedMining.snappedResourceAt(2.95 * 32, 2.5 * 32), { x: 2, y: 2 });
+assert.equal(queuedMining.snappedResourceAt(3.11 * 32, 2.5 * 32), null);
+
+// Ground movement pauses without losing commands; resume restarts the uncompleted target.
+const pauseTimers = new Map();
+let nextTimer = 1;
+globalThis.window = {
+  setTimeout(callback) { const id = nextTimer; nextTimer += 1; pauseTimers.set(id, callback); return id; },
+  clearTimeout(id) { pauseTimers.delete(id); },
+};
+const pauseMining = new Mining(queueMap, queuePlayer, new Inventory(items), {
+  delayMilliseconds: 1,
+  maximumTileDistance: 10,
+  pickaxeDelayMultiplier: 0.5,
+  actionQueueLimit: 3,
+  tapSnapRadiusTiles: 0.6,
+});
+pauseMining.queueResource({ x: 2, y: 2 });
+pauseMining.pauseQueue();
+assert.equal(pauseMining.paused, true);
+assert.deepEqual(pauseMining.queueContents(), ['2,2']);
+assert.equal(pauseTimers.size, 0, 'pausing cancels mining in progress');
+pauseMining.resumeQueue();
+assert.equal(pauseMining.paused, false);
+assert.equal(pauseTimers.size, 1, 'resuming restarts the current target');
+queueResources.set('4,0', 'stone');
+pauseMining.resetQueue({ x: 4, y: 0 });
+assert.deepEqual(pauseMining.queueContents(), ['4,0']);
+pauseMining.clearQueue();
+assert.deepEqual(pauseMining.queueContents(), []);
 
 console.log(`Verified ${mineCount} isolated rewards for each of ${mineableItems.length} resource types.`);

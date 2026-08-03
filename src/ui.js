@@ -1,6 +1,6 @@
 // Provides HUD buttons and full-screen, touch-friendly inventory and crafting overlays.
 export class GameUI {
-  constructor(scene, inventory, crafting, items, settings) {
+  constructor(scene, inventory, crafting, items, settings, mining) {
     this.scene = scene;
     this.inventory = inventory;
     this.crafting = crafting;
@@ -8,6 +8,7 @@ export class GameUI {
     this.settings = settings;
     this.open = false;
     this.overlayObjects = [];
+    this.mining = mining;
 
     this.inventoryButton = scene.add.text(0, 0, 'Inventory', {
       backgroundColor: '#25333d', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '18px',
@@ -27,12 +28,34 @@ export class GameUI {
       event.stopPropagation();
       this.showCrafting();
     });
+    this.resumeButton = this.makeQueueButton('Resume', '#3e6680', () => this.mining.resumeQueue());
+    this.clearQueueButton = this.makeQueueButton('\u2715', '#713d3d', () => this.mining.clearQueue());
+    mining.onQueueChange((queue, paused) => this.updateQueueButtons(queue, paused));
     scene.scale.on('resize', () => this.layout());
     inventory.onChange(() => {
       if (this.open === 'inventory') this.showInventory();
       if (this.open === 'crafting') this.showCrafting();
     });
     this.layout();
+    this.updateQueueButtons(mining.queue, mining.paused);
+  }
+
+  makeQueueButton(label, color, action) {
+    const button = this.scene.add.text(0, 0, label, {
+      backgroundColor: color, color: '#ffffff', fontFamily: 'sans-serif', fontSize: '18px',
+      align: 'center',
+    }).setFixedSize(label === '\u2715' ? this.settings.touchTargetSize : 100, this.settings.touchTargetSize)
+      .setDepth(20).setScrollFactor(0).setInteractive({ useHandCursor: true });
+    button.on('pointerup', (_, __, ___, event) => {
+      event.stopPropagation();
+      action();
+    });
+    return button;
+  }
+
+  updateQueueButtons(queue, paused) {
+    this.resumeButton.setVisible(queue.length > 0 && paused);
+    this.clearQueueButton.setVisible(queue.length > 0);
   }
 
   layout() {
@@ -40,6 +63,12 @@ export class GameUI {
     this.craftButton.setPosition(
       this.scene.scale.width - this.settings.screenPadding - 120,
       this.settings.screenPadding,
+    );
+    const bottom = this.scene.scale.height - this.settings.screenPadding - this.settings.touchTargetSize;
+    this.resumeButton.setPosition(this.settings.screenPadding, bottom);
+    this.clearQueueButton.setPosition(
+      this.scene.scale.width - this.settings.screenPadding - this.settings.touchTargetSize,
+      bottom,
     );
     if (this.open === 'inventory') this.showInventory();
     if (this.open === 'crafting') this.showCrafting();
