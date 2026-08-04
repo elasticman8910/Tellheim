@@ -101,13 +101,13 @@ export class TemperateMap {
     hullTiles.forEach(({ x, y }) => this.addPodSprite(x, y, 'landingPodHull', size));
     this.addPodSprite(door.x, door.y, 'landingPodDoor', size);
     objects.forEach((object) => {
-      this.addPodSprite(object.x, object.y, object.texture, size);
+      object.sprite = this.addPodSprite(object.x, object.y, object.texture, size);
       console.log(`Landing pod station: ${object.name} at (${object.x}, ${object.y})`);
     });
   }
 
   addPodSprite(x, y, texture, size) {
-    this.scene?.add?.image(x * size + size / 2, y * size + size / 2, texture)?.setDepth(1);
+    return this.scene?.add?.image(x * size + size / 2, y * size + size / 2, texture)?.setDepth(1);
   }
 
   isPodHull(x, y) {
@@ -141,6 +141,14 @@ export class TemperateMap {
 
   baseAt(x, y) {
     return this.baseTiles.get(`${x},${y}`)?.itemId || null;
+  }
+
+  setBasePowered(x, y, powered) {
+    this.baseTiles.get(`${x},${y}`)?.sprite?.setAlpha?.(powered ? 1 : 0.35);
+  }
+
+  setPodObjectPowered(id, powered) {
+    this.landingPod?.objects.find((object) => object.id === id)?.sprite?.setAlpha?.(powered ? 1 : 0.35);
   }
 
   // Base parts use a separate layer, leaving seeded terrain unchanged underneath.

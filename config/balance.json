@@ -18,7 +18,8 @@
     "capacitySeconds": 240,
     "outdoorDrainPerSecond": 1,
     "refillPerSecond": 8,
-    "healthDrainPerSecond": 10
+    "healthDrainPerSecond": 10,
+    "unpoweredRoomDrainPerSecond": 0.25
   },
   "dayNight": {
     "dayDurationSeconds": 300,
@@ -29,8 +30,11 @@
   },
   "power": {
     "solarGenerationPerSecond": 5,
+    "solarPanelGenerationPerSecond": 3,
     "batteryCapacity": 1200,
     "batteryStartingCharge": 600,
+    "batteryMaximumOutputPerSecond": 8,
+    "shutdownOrder": ["heater", "suitRack", "lifeSupport"],
     "consumerDrawPerSecond": {
       "lifeSupport": 2,
       "suitRack": 1,

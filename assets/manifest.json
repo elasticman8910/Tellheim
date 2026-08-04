@@ -161,6 +161,14 @@
     "width": 32,
     "height": 32
   },
+  "baseSolarPanel": {
+    "type": "generated",
+    "color": "#315ce8",
+    "borderColor": "#8edfff",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
   "itemPickaxe": {
     "type": "generated",
     "color": "#ffc247",

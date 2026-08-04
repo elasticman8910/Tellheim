@@ -1,10 +1,12 @@
 // Finds airtight rooms and owns oxygen, suffocation, and respawning.
 export class OxygenSystem {
-  constructor(scene, map, player, settings) {
+  constructor(scene, map, player, settings, power = null, powerDraw = null) {
     this.scene = scene;
     this.map = map;
     this.player = player;
     this.settings = settings;
+    this.power = power;
+    this.powerDraw = powerDraw;
     this.oxygen = settings.capacitySeconds;
     this.health = player.settings.healthCapacity;
     this.regions = [];
@@ -56,14 +58,14 @@ export class OxygenSystem {
       if (!reachesEdge) {
         regions.push({
           tiles,
-          hasLifeSupport: tiles.some((tile) => this.map.baseAt(tile.x, tile.y) === 'lifeSupportUnit')
-            || tiles.some((tile) => {
+          lifeSupportIds: tiles.filter((tile) => this.map.baseAt(tile.x, tile.y) === 'lifeSupportUnit')
+            .map((tile) => `lifeSupport:${tile.x},${tile.y}`).concat(tiles.flatMap((tile) => {
               const object = this.map.podObjectAt?.(tile.x + 1, tile.y)
                 || this.map.podObjectAt?.(tile.x - 1, tile.y)
                 || this.map.podObjectAt?.(tile.x, tile.y + 1)
                 || this.map.podObjectAt?.(tile.x, tile.y - 1);
-              return object?.id === 'lifeSupport';
-            }),
+              return object?.id === 'lifeSupport' ? ['podLifeSupport'] : [];
+            })),
         });
       }
     }
@@ -85,7 +87,26 @@ export class OxygenSystem {
     this.regions = next;
     this.tileRegions.clear();
     next.forEach((region) => region.tiles.forEach(({ x, y }) => this.tileRegions.set(`${x},${y}`, region)));
+    this.syncLifeSupportConsumers();
     this.redrawTint();
+  }
+
+  syncLifeSupportConsumers() {
+    if (!this.power) return;
+    const liveIds = new Set(this.regions.flatMap((region) => region.lifeSupportIds));
+    [...this.power.consumers.keys()].filter((id) => id === 'podLifeSupport' || id.startsWith('lifeSupport:'))
+      .filter((id) => !liveIds.has(id)).forEach((id) => this.power.unregisterConsumer(id));
+    liveIds.forEach((id) => {
+      const coordinates = id.split(':')[1]?.split(',').map(Number);
+      this.power.registerConsumer(id, {
+        drawPerSecond: this.powerDraw.lifeSupport,
+        type: 'lifeSupport',
+        onPowerChange: (powered) => {
+          if (id === 'podLifeSupport') this.map.setPodObjectPowered?.('lifeSupport', powered);
+          else this.map.setBasePowered?.(coordinates[0], coordinates[1], powered);
+        },
+      });
+    });
   }
 
   redrawTint() {
@@ -104,7 +125,9 @@ export class OxygenSystem {
     const bySuitRack = this.map.isAdjacentToSuitRack?.(tile.x, tile.y);
     const region = this.tileRegions.get(`${tile.x},${tile.y}`);
     if (bySuitRack) return 'suit-rack-refill';
-    if (region?.hasLifeSupport) return 'room-refill';
+    if (region?.lifeSupportIds.length && (!this.power
+      || region.lifeSupportIds.some((id) => this.power.isPowered(id)))) return 'room-refill';
+    if (region?.lifeSupportIds.length) return 'room-air-drain';
     return 'outdoor-drain';
   }
 
@@ -114,10 +137,13 @@ export class OxygenSystem {
       if (state === 'suit-rack-refill') console.log('Suit Rack: refill started');
       if (this.state === 'suit-rack-refill') console.log('Suit Rack: refill stopped');
       console.log(`Oxygen state: ${this.state || 'start'} -> ${state}`);
+      if (state === 'room-air-drain') console.log('Room air drain: started (Life Support unpowered)');
+      if (this.state === 'room-air-drain') console.log('Room air drain: ended (Life Support restored)');
       this.state = state;
       this.player.sprite?.setTexture?.(state.endsWith('refill') ? 'playerNoHelmet' : 'player');
     }
     if (state.endsWith('refill')) this.oxygen += this.settings.refillPerSecond * deltaSeconds;
+    else if (state === 'room-air-drain') this.oxygen -= this.settings.unpoweredRoomDrainPerSecond * deltaSeconds;
     else this.oxygen -= this.settings.outdoorDrainPerSecond * deltaSeconds;
     this.oxygen = Math.max(0, Math.min(this.settings.capacitySeconds, this.oxygen));
     if (this.oxygen === 0) this.health -= this.settings.healthDrainPerSecond * deltaSeconds;

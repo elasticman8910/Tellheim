@@ -70,6 +70,11 @@ const warmPower = warm.temperature.suitPower;
 warm.temperature.update(1);
 assert.equal(warm.temperature.suitPower, warmPower, 'a powered heated sealed room stops suit drain');
 assert.equal(warm.power.consumers.has('heater:2,2'), true, 'placed heater is a grid consumer');
+warm.power.battery = 0;
+warm.power.update(1);
+warm.temperature.recompute();
+assert.equal(warm.temperature.isPlayerWarm(), false,
+  'a room becomes cold when a brownout shuts its heater down');
 
 const unheated = makeWorld();
 unheated.cycle.update(balance.dayNight.dayDurationSeconds + balance.dayNight.duskDurationSeconds);
@@ -78,4 +83,4 @@ unheated.temperature.update(1);
 assert.ok(unheated.temperature.suitPower < unheatedPower,
   'an unheated sealed room remains at ambient and does not protect the suit');
 
-console.log('Verified ambient cold, suit drain, cold damage, rack recharge, and heated/unheated rooms.');
+console.log('Verified ambient cold, suit drain, cold damage, rack recharge, and heater brownouts.');
