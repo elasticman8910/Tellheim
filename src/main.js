@@ -8,6 +8,7 @@ import { GameUI } from './ui.js';
 import { Crafting } from './crafting.js';
 import { handleWorldTap } from './input.js';
 import { Building } from './building.js';
+import { OxygenSystem } from './oxygen.js';
 
 class TemperateScene extends Phaser.Scene {
   constructor() { super('temperate'); }
@@ -33,8 +34,10 @@ class TemperateScene extends Phaser.Scene {
     this.crafting = new Crafting(this.inventory, items);
     this.mining = new Mining(this.map, this.player, this.inventory, balance.mining);
     this.building = new Building(this.map, this.player, this.inventory, items);
+    this.oxygen = new OxygenSystem(this, this.map, this.player, balance.oxygen);
+    this.building.onStructureChange((change) => this.oxygen.recompute(change));
     this.ui = new GameUI(
-      this, this.inventory, this.crafting, items, balance.ui, this.mining, this.building,
+      this, this.inventory, this.crafting, items, balance.ui, this.mining, this.building, this.oxygen,
     );
     this.cameras.main.startFollow(this.player.sprite, true, 0.12, 0.12);
     this.cameras.main.setBackgroundColor('#202820');
@@ -56,6 +59,7 @@ class TemperateScene extends Phaser.Scene {
   update() {
     this.player.update();
     this.mining.update();
+    this.oxygen.update(this.game.loop.delta / 1000);
   }
 }
 

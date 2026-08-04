@@ -96,6 +96,21 @@
       "output": { "itemId": "door", "quantity": 1 }
     }
   },
+  "oxygenGenerator": {
+    "id": "oxygenGenerator",
+    "name": "Oxygen Generator",
+    "spriteKey": "baseOxygenGenerator",
+    "placeable": true,
+    "blocksMovement": false,
+    "recipe": {
+      "ingredients": [
+        { "itemId": "copperIngot", "quantity": 4 },
+        { "itemId": "stoneSlab", "quantity": 3 },
+        { "itemId": "wovenFiber", "quantity": 2 }
+      ],
+      "output": { "itemId": "oxygenGenerator", "quantity": 1 }
+    }
+  },
   "pickaxe": {
     "id": "pickaxe",
     "name": "Pickaxe",

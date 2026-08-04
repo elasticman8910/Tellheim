@@ -1,6 +1,6 @@
 // Provides HUD buttons and full-screen, touch-friendly inventory and crafting overlays.
 export class GameUI {
-  constructor(scene, inventory, crafting, items, settings, mining, building) {
+  constructor(scene, inventory, crafting, items, settings, mining, building, oxygen) {
     this.scene = scene;
     this.inventory = inventory;
     this.crafting = crafting;
@@ -11,6 +11,19 @@ export class GameUI {
     this.mining = mining;
     this.building = building;
     this.paletteObjects = [];
+    this.oxygen = oxygen;
+
+    this.oxygenLabel = scene.add.text(0, 0, 'O₂', {
+      color: '#ffffff', fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold',
+    }).setDepth(20).setScrollFactor(0);
+    this.oxygenBack = scene.add.rectangle(0, 0, 150, 12, 0x25333d).setOrigin(0).setDepth(20).setScrollFactor(0);
+    this.oxygenBar = scene.add.rectangle(0, 0, 150, 12, 0x55cce0).setOrigin(0).setDepth(21).setScrollFactor(0);
+    this.healthLabel = scene.add.text(0, 0, 'HP', {
+      color: '#ffffff', fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold',
+    }).setDepth(20).setScrollFactor(0);
+    this.healthBack = scene.add.rectangle(0, 0, 150, 10, 0x25333d).setOrigin(0).setDepth(20).setScrollFactor(0);
+    this.healthBar = scene.add.rectangle(0, 0, 150, 10, 0xd45454).setOrigin(0).setDepth(21).setScrollFactor(0);
+    oxygen.onChange(() => this.updateSurvivalBars());
 
     this.inventoryButton = scene.add.text(0, 0, 'Inventory', {
       backgroundColor: '#25333d', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '18px',
@@ -53,6 +66,12 @@ export class GameUI {
     building.onChange(() => this.showBuildPalette());
     this.layout();
     this.updateQueueButtons(mining.queue, mining.paused);
+    this.updateSurvivalBars();
+  }
+
+  updateSurvivalBars() {
+    this.oxygenBar.scaleX = this.oxygen.oxygen / this.oxygen.settings.capacitySeconds;
+    this.healthBar.scaleX = this.oxygen.health / this.oxygen.player.settings.healthCapacity;
   }
 
   makeQueueButton(label, color, action) {
@@ -82,6 +101,14 @@ export class GameUI {
       this.settings.screenPadding,
     );
     this.buildButton?.setPosition((this.scene.scale.width - 100) / 2, this.settings.screenPadding);
+    const meterX = this.settings.screenPadding + 25;
+    const meterY = this.settings.screenPadding + this.settings.touchTargetSize + 10;
+    this.oxygenLabel?.setPosition(this.settings.screenPadding, meterY - 4);
+    this.oxygenBack?.setPosition(meterX, meterY);
+    this.oxygenBar?.setPosition(meterX, meterY);
+    this.healthLabel?.setPosition(this.settings.screenPadding, meterY + 17);
+    this.healthBack?.setPosition(meterX, meterY + 20);
+    this.healthBar?.setPosition(meterX, meterY + 20);
     const width = this.scene.scale.gameSize?.width || this.scene.scale.width;
     const height = this.scene.scale.gameSize?.height || this.scene.scale.height;
     const buttonSize = this.settings.touchTargetSize;

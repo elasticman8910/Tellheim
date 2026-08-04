@@ -8,6 +8,7 @@ export class Building {
     this.active = false;
     this.selectedItemId = null;
     this.listeners = [];
+    this.structureListeners = [];
   }
 
   placeableItems() {
@@ -16,6 +17,14 @@ export class Building {
 
   onChange(listener) {
     this.listeners.push(listener);
+  }
+
+  onStructureChange(listener) {
+    this.structureListeners.push(listener);
+  }
+
+  notifyStructureChange(action, x, y, itemId) {
+    this.structureListeners.forEach((listener) => listener({ action, x, y, itemId }));
   }
 
   notifyChange() {
@@ -47,6 +56,7 @@ export class Building {
       this.map.removeBase(x, y);
       this.inventory.add(placedItemId);
       console.log(`Build remove: ${placedItemId} at (${x}, ${y})`);
+      this.notifyStructureChange('remove', x, y, placedItemId);
       this.notifyChange();
       return 'removed';
     }
@@ -57,6 +67,7 @@ export class Building {
     if (!this.map.placeBase(x, y, this.selectedItemId)) return false;
     this.inventory.consume([{ itemId: this.selectedItemId, quantity: 1 }]);
     console.log(`Build place: ${this.selectedItemId} at (${x}, ${y})`);
+    this.notifyStructureChange('place', x, y, this.selectedItemId);
     this.notifyChange();
     return 'placed';
   }
