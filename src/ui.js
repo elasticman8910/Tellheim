@@ -88,6 +88,10 @@ export class GameUI {
       this.mining.resumeQueue('resume-button');
     });
     this.clearQueueButton = this.makeQueueButton('\u2715', '#a32929', () => this.mining.cancelQueue());
+    this.gatherModeButton = this.makeQueueButton('', '#53616b', () => {
+      this.mining.toggleMode();
+      this.updateGatherMode();
+    });
     mining.onQueueChange((queue, paused) => this.updateQueueButtons(queue, paused));
     scene.scale.on('resize', () => this.layout());
     inventory.onChange(() => {
@@ -98,6 +102,7 @@ export class GameUI {
     building.onChange(() => this.showBuildPalette());
     this.layout();
     this.updateQueueButtons(mining.queue, mining.paused);
+    this.updateGatherMode();
     this.updateSurvivalBars();
     this.updatePowerReadout();
     this.updateTemperatureReadout();
@@ -146,6 +151,12 @@ export class GameUI {
     this.clearQueueButton.setVisible(queue.length > 0);
   }
 
+  updateGatherMode() {
+    const gatherAll = this.mining.mode === 'all';
+    this.gatherModeButton.setText(gatherAll ? 'Gather All' : 'Gather One');
+    this.gatherModeButton.setBackgroundColor(gatherAll ? '#3e6680' : '#53616b');
+  }
+
   layout() {
     this.inventoryButton.setPosition(this.settings.screenPadding, this.settings.screenPadding);
     this.craftButton.setPosition(
@@ -175,6 +186,7 @@ export class GameUI {
     const resumeY = height - this.settings.screenPadding - buttonSize * 2;
     this.resumeButton.setPosition(right - 100, resumeY);
     this.clearQueueButton.setPosition(right - buttonSize, resumeY - buttonSize * 2);
+    this.gatherModeButton?.setPosition(right - 100, resumeY + buttonSize + 8);
     this.menuButton?.setPosition(right, height - this.settings.screenPadding);
     if (this.open === 'inventory') this.showInventory();
     if (this.open === 'crafting') this.showCrafting();

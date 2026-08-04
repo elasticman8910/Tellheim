@@ -11,6 +11,7 @@ export class Mining {
     this.paused = false;
     this.queueListeners = [];
     this.completionListeners = [];
+    this.mode = settings.defaultMode || 'all';
   }
 
   onMineComplete(listener) { this.completionListeners.push(listener); }
@@ -23,6 +24,15 @@ export class Mining {
     return this.queue.map((entry) => entry.key);
   }
 
+  setMode(mode) {
+    if (!['all', 'one'].includes(mode)) return false;
+    this.mode = mode;
+    console.log(`Gather mode: ${mode === 'all' ? 'Gather All' : 'Gather One'}`);
+    return true;
+  }
+
+  toggleMode() { this.setMode(this.mode === 'all' ? 'one' : 'all'); return this.mode; }
+
   notifyQueueChange() {
     this.renumberQueueMarkers();
     this.queueListeners.forEach((listener) => listener(this.queue, this.paused));
@@ -32,7 +42,7 @@ export class Mining {
   renumberQueueMarkers() {
     this.queue.forEach((entry, index) => {
       entry.number = index + 1;
-      entry.marker?.setText(String(entry.number));
+      entry.marker?.setText(`${entry.mode === 'one' ? '\u25cb' : '\u25cf'} ${entry.number}`);
     });
   }
 
@@ -79,6 +89,7 @@ export class Mining {
       const oldKey = entry.key;
       entry.tile = { ...tile };
       entry.key = tileKey;
+      entry.mode = this.mode;
       this.positionMarker(entry);
       this.pulseMarker(entry);
       console.log(`Queue replace: ${oldKey} -> ${tileKey} at position ${replaceIndex + 1}`);
@@ -88,11 +99,11 @@ export class Mining {
 
     const entry = {
       tile: { ...tile }, key: tileKey, state: 'waiting', marker: null,
-      number: this.queue.length + 1,
+      number: this.queue.length + 1, mode: this.mode, feedback: null,
     };
     this.queue.push(entry);
     this.createMarker(entry);
-    console.log(`Queue add: ${itemId} at (${tile.x}, ${tile.y}), position ${this.queue.length}`);
+    console.log(`Queue add: ${itemId} at (${tile.x}, ${tile.y}), position ${this.queue.length}, mode ${entry.mode}`);
     if (this.queue.length === 1 && !this.paused) this.startCurrent();
     this.notifyQueueChange();
     return true;
@@ -111,7 +122,7 @@ export class Mining {
     const distance = Math.abs(playerTile.x - entry.tile.x) + Math.abs(playerTile.y - entry.tile.y);
     if (distance <= this.settings.maximumTileDistance) {
       entry.state = 'mining';
-      this.startMining(entry.tile, () => this.completeCurrent(entry));
+      this.startMining(entry.tile, () => this.unitFinished(entry));
       return;
     }
 
@@ -140,6 +151,8 @@ export class Mining {
       this.timer = null;
     }
     this.pending.clear();
+    const entry = this.queue[0];
+    this.destroyFeedback(entry);
   }
 
   pauseQueue() {
@@ -193,7 +206,7 @@ export class Mining {
     if (distance > this.settings.maximumTileDistance) return;
 
     entry.state = 'mining';
-    this.startMining(entry.tile, () => this.completeCurrent(entry));
+    this.startMining(entry.tile, () => this.unitFinished(entry));
   }
 
   startMining(tile, onComplete = null) {
@@ -204,16 +217,34 @@ export class Mining {
     console.log(`Mining tile-id ${tileKey} -> item-id ${itemId}`);
     this.pending.add(tileKey);
     const ownsPickaxe = this.inventory.count('pickaxe') > 0;
-    const delay = this.settings.delayMilliseconds
+    const delay = (this.settings.materials?.[itemId]?.millisecondsPerUnit
+      ?? this.settings.delayMilliseconds)
       * (ownsPickaxe ? this.settings.pickaxeDelayMultiplier : 1);
+    const entry = this.queue.find((candidate) => candidate.key === tileKey);
+    this.createFeedback(entry);
+    this.updateFeedback(entry, 0);
     console.log(`Mining started: ${itemId} at (${tile.x}, ${tile.y}), delay ${delay}ms`);
+    const startedAt = Date.now();
+    if (entry && this.map.scene?.time?.addEvent) {
+      entry.progressEvent = this.map.scene.time.addEvent({
+        delay: this.settings.progressRefreshMilliseconds, loop: true, callback: () => {
+          this.updateFeedback(entry, Math.min(1, (Date.now() - startedAt) / delay));
+        },
+      });
+    }
     this.timer = window.setTimeout(() => {
       this.timer = null;
       this.pending.delete(tileKey);
-      const minedItem = this.map.removeResource(tile.x, tile.y);
+      entry?.progressEvent?.remove?.();
+      if (entry) entry.progressEvent = null;
+      const minedItem = this.map.mineResourceUnit
+        ? this.map.mineResourceUnit(tile.x, tile.y)
+        : this.map.removeResource(tile.x, tile.y);
       if (minedItem) {
         this.inventory.add(minedItem);
-        console.log(`Mining completed: ${minedItem} at (${tile.x}, ${tile.y})`);
+        const remaining = this.map.resourceNodeAt?.(tile.x, tile.y)?.remainingYield ?? 0;
+        console.log(`Mining yield: +1 ${minedItem} at (${tile.x}, ${tile.y}), mode ${entry?.mode || this.mode}, remaining ${remaining}`);
+        this.updateFeedback(entry, 1, true);
         this.completionListeners.forEach((listener) => listener({ ...tile, itemId: minedItem }));
       }
       onComplete?.();
@@ -221,11 +252,22 @@ export class Mining {
     return true;
   }
 
+  unitFinished(entry) {
+    if (!entry || this.queue[0] !== entry) return;
+    const hasMore = Boolean(this.map.resourceAt(entry.tile.x, entry.tile.y));
+    if (entry.mode === 'all' && hasMore && !this.paused) {
+      this.startMining(entry.tile, () => this.unitFinished(entry));
+    } else {
+      this.completeCurrent(entry);
+    }
+  }
+
   completeCurrent(expectedEntry = this.queue[0]) {
     // Ignore a cancelled timer callback instead of completing a newer first target.
     if (!expectedEntry || this.queue[0] !== expectedEntry) return;
     const completed = this.queue.shift();
     completed.marker?.destroy();
+    this.destroyFeedback(completed);
     this.renumberQueueMarkers();
     const next = this.queue[0];
     if (next && !this.paused) {
@@ -240,7 +282,7 @@ export class Mining {
   createMarker(entry) {
     const scene = this.map.scene;
     if (!scene?.add?.text) return;
-    entry.marker = scene.add.text(0, 0, String(entry.number), {
+    entry.marker = scene.add.text(0, 0, `${entry.mode === 'one' ? '\u25cb' : '\u25cf'} ${entry.number}`, {
       backgroundColor: '#25333d', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '18px',
       fontStyle: 'bold', padding: { x: 6, y: 3 },
     }).setOrigin(0.5).setDepth(10);
@@ -261,5 +303,41 @@ export class Mining {
       scale: 1,
       duration: this.settings.queueMarkerPulseMilliseconds,
     });
+  }
+
+  createFeedback(entry) {
+    if (!entry || entry.feedback || !this.map.scene?.add?.rectangle) return;
+    const size = this.map.settings.tileSize;
+    const x = entry.tile.x * size + size / 2;
+    const y = entry.tile.y * size;
+    const back = this.map.scene.add.rectangle(x, y - 7, size, 5, 0x25333d).setDepth(11);
+    const bar = this.map.scene.add.rectangle(x - size / 2, y - 7, size, 5, 0x55cce0)
+      .setOrigin(0, 0.5).setDepth(12);
+    const label = this.map.scene.add.text(x, y - 13, '', {
+      color: '#ffffff', backgroundColor: '#25333dcc', fontFamily: 'sans-serif', fontSize: '12px',
+      padding: { x: 2, y: 1 },
+    }).setOrigin(0.5, 1).setDepth(12);
+    entry.feedback = { back, bar, label };
+  }
+
+  updateFeedback(entry, progress, pulse = false) {
+    if (!entry?.feedback) return;
+    entry.feedback.bar.scaleX = progress;
+    const node = this.map.resourceNodeAt?.(entry.tile.x, entry.tile.y);
+    entry.feedback.label.setText(`${node?.remainingYield ?? 0}/${node?.totalYield ?? 0}`);
+    if (pulse) {
+      entry.feedback.label.setScale(this.settings.counterPulseScale);
+      this.map.scene?.tweens?.add?.({
+        targets: entry.feedback.label, scale: 1,
+        duration: this.settings.counterPulseMilliseconds,
+      });
+    }
+  }
+
+  destroyFeedback(entry) {
+    entry?.progressEvent?.remove?.();
+    if (!entry?.feedback) return;
+    Object.values(entry.feedback).forEach((object) => object?.destroy?.());
+    entry.feedback = null;
   }
 }
