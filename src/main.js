@@ -12,6 +12,7 @@ import { OxygenSystem } from './oxygen.js';
 import { DayNightCycle } from './daynight.js';
 import { PowerGrid } from './power.js';
 import { TemperatureSystem } from './temperature.js';
+import { SaveManager } from './save.js';
 
 class TemperateScene extends Phaser.Scene {
   constructor() { super('temperate'); }
@@ -28,9 +29,12 @@ class TemperateScene extends Phaser.Scene {
   create() {
     const balance = this.cache.json.get('balance');
     const items = this.cache.json.get('items');
+    this.saves = new SaveManager();
+    const savedGame = this.saves.load();
+    const mapSettings = { ...balance.map, seed: savedGame?.map?.seed || balance.map.seed };
     AssetRegistry.createPlaceholders(this, this.cache.json.get('assets'));
     this.debugToggle = new DebugToggle(balance.debug);
-    this.map = new TemperateMap(this, balance.map, items);
+    this.map = new TemperateMap(this, mapSettings, items);
     this.map.create();
     this.player = new PlayerController(this, this.map, balance.player);
     this.inventory = new Inventory(items);
@@ -48,16 +52,21 @@ class TemperateScene extends Phaser.Scene {
       this.map, this.player, this.dayNight, this.power, this.oxygen,
       balance.temperature, balance.power.consumerDrawPerSecond,
     );
+    this.saves.restore(this, savedGame);
     this.building.onStructureChange((change) => {
       this.oxygen.recompute(change);
       this.temperature.recompute();
       this.power.setSolarPanels([...this.map.baseTiles.values()]
         .filter(({ itemId }) => itemId === 'solarPanel').length);
+      this.saves.save('structure change');
     });
     this.ui = new GameUI(
       this, this.inventory, this.crafting, items, balance.ui, this.mining, this.building, this.oxygen,
-      this.dayNight, this.power, this.temperature,
+      this.dayNight, this.power, this.temperature, () => this.saves.reset(),
     );
+    this.saves.connect(this, balance.save.intervalSeconds);
+    this.crafting.onCraft(() => this.saves.save('crafting complete'));
+    this.mining.onMineComplete(() => this.saves.save('mining complete'));
     this.cameras.main.startFollow(this.player.sprite, true, 0.12, 0.12);
     this.cameras.main.setBackgroundColor('#202820');
 
@@ -72,7 +81,7 @@ class TemperateScene extends Phaser.Scene {
       }
       handleWorldTap(world.x, world.y, balance.map.tileSize, this.mining, this.player);
     });
-    console.log(`Tellheim booted: Temperate seed "${balance.map.seed}"`);
+    console.log(`Tellheim booted: Temperate seed "${mapSettings.seed}"`);
   }
 
   update() {
