@@ -90,7 +90,19 @@ assert.equal(manager.load(), null, 'corrupt saves fall back to a fresh game');
 assert.equal(storage.getItem(CORRUPT_SAVE_KEY), '{broken json');
 assert.equal(storage.getItem(SAVE_KEY), null);
 assert.ok(logs.some((message) => message.startsWith('Save corrupt')));
-assert.equal(SAVE_SCHEMA_VERSION, 1);
-assert.deepEqual(migrations, [], 'an empty migration list is ready for future schema changes');
+assert.equal(SAVE_SCHEMA_VERSION, 2);
+assert.equal(migrations[0].fromVersion, 1, 'schema one saves gain resource-node timing fields');
+
+const legacy = manager.capture(makeGame());
+legacy.schemaVersion = 1;
+legacy.map.tileChanges.forEach((tile) => {
+  delete tile.totalYield;
+  delete tile.regrowAt;
+});
+storage.setItem(SAVE_KEY, JSON.stringify(legacy));
+const migrated = manager.load();
+assert.equal(migrated.schemaVersion, 2);
+assert.ok(migrated.map.tileChanges.every((tile) => Number.isFinite(tile.totalYield)));
+assert.ok(migrated.map.tileChanges.every((tile) => tile.regrowAt === null));
 
 console.log('Verified exact save/reload, mined nodes, sealed power, versioning, and corrupt fallback.');

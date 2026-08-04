@@ -53,13 +53,21 @@
     "coldHealthDrainPerSecond": 6
   },
   "mining": {
-    "delayMilliseconds": 450,
+    "defaultMode": "all",
+    "materials": {
+      "stone": { "millisecondsPerUnit": 450, "yieldRange": [2, 5] },
+      "copper": { "millisecondsPerUnit": 600, "yieldRange": [2, 4] },
+      "fiber": { "millisecondsPerUnit": 350, "yieldRange": [2, 5], "regrowMilliseconds": 60000 }
+    },
     "maximumTileDistance": 1,
     "pickaxeDelayMultiplier": 0.5,
     "tapSnapRadiusTiles": 0.6,
     "actionQueueLimit": 3,
     "queueMarkerPulseMilliseconds": 180,
-    "queueMarkerPulseScale": 1.35
+    "queueMarkerPulseScale": 1.35,
+    "counterPulseMilliseconds": 180,
+    "counterPulseScale": 1.3,
+    "progressRefreshMilliseconds": 40
   },
   "ui": {
     "touchTargetSize": 52,

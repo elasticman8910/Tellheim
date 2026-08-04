@@ -244,4 +244,63 @@ pauseMining.queueResource({ x: 2, y: 0 });
 pauseMining.cancelQueue();
 assert.deepEqual(pauseMining.queueContents(), []);
 
+// Gather One advances after one unit, while Gather All keeps scheduling units until depletion.
+const economyTimers = [];
+globalThis.window = {
+  setTimeout(callback) { economyTimers.push(callback); return economyTimers.length; }, clearTimeout() {},
+};
+const economyNodes = new Map([
+  ['1,0', { itemId: 'stone', remainingYield: 3, totalYield: 3 }],
+  ['2,0', { itemId: 'copper', remainingYield: 2, totalYield: 2 }],
+]);
+const economyMap = {
+  scene: null, settings: { tileSize: 32 },
+  resourceAt(x, y) { const node = economyNodes.get(`${x},${y}`); return node?.remainingYield > 0 ? node.itemId : null; },
+  resourceNodeAt(x, y) { return economyNodes.get(`${x},${y}`); },
+  mineResourceUnit(x, y) {
+    const node = economyNodes.get(`${x},${y}`);
+    if (!node?.remainingYield) return null;
+    node.remainingYield -= 1;
+    return node.itemId;
+  },
+};
+const economyMining = new Mining(economyMap, queuePlayer, new Inventory(items), {
+  defaultMode: 'one', materials: { stone: { millisecondsPerUnit: 5 }, copper: { millisecondsPerUnit: 9 } },
+  maximumTileDistance: 10, pickaxeDelayMultiplier: 0.5, actionQueueLimit: 3,
+  tapSnapRadiusTiles: 0.6, queueMarkerPulseMilliseconds: 180, queueMarkerPulseScale: 1.35,
+  counterPulseMilliseconds: 180, counterPulseScale: 1.3, progressRefreshMilliseconds: 40,
+});
+economyMining.queueResource({ x: 1, y: 0 });
+economyMining.queueResource({ x: 2, y: 0 });
+economyTimers.shift()();
+assert.equal(economyNodes.get('1,0').remainingYield, 2, 'Gather One takes exactly one unit');
+assert.equal(economyMining.queue[0].key, '2,0', 'Gather One advances to the next target');
+economyMining.setMode('all');
+economyMining.queue[0].mode = 'all';
+economyTimers.shift()();
+economyTimers.shift()();
+assert.equal(economyNodes.get('2,0').remainingYield, 0, 'Gather All depletes its queued node');
+
+// Depleted plants retain a timed stub and regrow; mineral nodes are removed permanently.
+const nodeMap = Object.create(TemperateMap.prototype);
+nodeMap.items = items;
+nodeMap.resourceSettings = {
+  fiber: { yieldRange: [2, 4], regrowMilliseconds: 1000 }, stone: { yieldRange: [2, 3] },
+};
+nodeMap.tiles = [[
+  { resourceItemId: 'fiber', remainingYield: 1, totalYield: 1, regrowAt: null },
+  { resourceItemId: 'stone', remainingYield: 1, totalYield: 1, regrowAt: null },
+]];
+nodeMap.resourceSprites = new Map();
+assert.equal(nodeMap.mineResourceUnit(0, 0, 5000), 'fiber');
+assert.equal(nodeMap.resourceAt(0, 0), null, 'plant stub cannot be gathered during regrowth');
+nodeMap.updateRegrowth(5999);
+assert.equal(nodeMap.resourceAt(0, 0), null);
+nodeMap.updateRegrowth(6000);
+assert.equal(nodeMap.resourceAt(0, 0), 'fiber', 'plant restores when its timer expires');
+assert.equal(nodeMap.tiles[0][0].remainingYield, 4);
+assert.equal(nodeMap.mineResourceUnit(1, 0, 5000), 'stone');
+nodeMap.updateRegrowth(999999);
+assert.equal(nodeMap.resourceAt(1, 0), null, 'ore never regrows');
+
 console.log(`Verified ${mineCount} isolated rewards for each of ${mineableItems.length} resource types.`);

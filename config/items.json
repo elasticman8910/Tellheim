@@ -4,6 +4,7 @@
     "name": "Stone",
     "spriteKey": "itemStone",
     "mineable": true,
+    "resourceKind": "mineral",
     "recipe": null
   },
   "copper": {
@@ -11,6 +12,7 @@
     "name": "Copper Ore",
     "spriteKey": "itemCopperOre",
     "mineable": true,
+    "resourceKind": "mineral",
     "recipe": null
   },
   "fiber": {
@@ -18,6 +20,7 @@
     "name": "Plant Fiber",
     "spriteKey": "itemPlantFiber",
     "mineable": true,
+    "resourceKind": "plant",
     "recipe": null
   },
   "wovenFiber": {

@@ -1,10 +1,21 @@
 // Serializes the complete playable world to localStorage and safely restores it.
-export const SAVE_SCHEMA_VERSION = 1;
+export const SAVE_SCHEMA_VERSION = 2;
 export const SAVE_KEY = 'tellheim.save';
 export const CORRUPT_SAVE_KEY = 'tellheim.save.corrupt';
 
 // Future schema changes add one { fromVersion, migrate } entry here.
-export const migrations = [];
+export const migrations = [{
+  fromVersion: 1,
+  migrate(save) {
+    save.map.tileChanges = save.map.tileChanges.map((tile) => ({
+      ...tile,
+      totalYield: tile.totalYield ?? (tile.remainingYield > 0 ? tile.remainingYield : 0),
+      regrowAt: null,
+    }));
+    save.schemaVersion = 2;
+    return save;
+  },
+}];
 
 export class SaveManager {
   constructor(storage = globalThis.localStorage, logger = console) {
@@ -68,7 +79,9 @@ export class SaveManager {
         seed: map.settings.seed,
         tileChanges: map.tiles.flatMap((row, y) => row.map((tile, x) => ({
           x, y, resourceItemId: tile.resourceItemId || null,
-          remainingYield: tile.resourceItemId ? 1 : 0,
+          remainingYield: tile.remainingYield || 0,
+          totalYield: tile.totalYield || 0,
+          regrowAt: tile.regrowAt ?? null,
         }))),
         structures: [...map.baseTiles.entries()].map(([key, value]) => {
           const [x, y] = key.split(',').map(Number);
@@ -102,8 +115,10 @@ export class SaveManager {
   restore(game, save) {
     if (!save) return false;
     const { map, player, inventory, oxygen, temperature, power, dayNight } = game;
-    (save.map?.tileChanges || []).forEach(({ x, y, resourceItemId, remainingYield }) => {
-      if (remainingYield <= 0 || !resourceItemId) map.removeResource(x, y);
+    (save.map?.tileChanges || []).forEach((node) => {
+      const { x, y, resourceItemId, remainingYield } = node;
+      if (map.restoreResourceNode) map.restoreResourceNode(x, y, node);
+      else if (remainingYield <= 0 || !resourceItemId) map.removeResource(x, y);
     });
     (save.map?.structures || []).forEach(({ x, y, itemId }) => map.placeBase(x, y, itemId));
     inventory.counts = inventory.reconcile(save.inventory || {});

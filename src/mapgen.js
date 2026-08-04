@@ -1,9 +1,10 @@
 // Builds the same Temperate landscape every time from the configured text seed.
 export class TemperateMap {
-  constructor(scene, settings, items) {
+  constructor(scene, settings, items, resourceSettings = {}) {
     this.scene = scene;
     this.settings = settings;
     this.items = items;
+    this.resourceSettings = resourceSettings;
     this.tiles = [];
     this.resourceSprites = new Map();
     this.baseTiles = new Map();
@@ -33,7 +34,12 @@ export class TemperateMap {
           : null;
         // The tile owns the reward id. Its texture is presentation only and is
         // never consulted when the tile is mined.
-        row.push({ terrain: type, resourceItemId: resource });
+        const range = this.resourceSettings[resource]?.yieldRange || [1, 1];
+        const yieldTotal = resource ? random.integerInRange(range[0], range[1]) : 0;
+        row.push({
+          terrain: type, resourceItemId: resource, remainingYield: yieldTotal,
+          totalYield: yieldTotal, regrowAt: null,
+        });
         this.scene.add.image(
           x * tileSize + tileSize / 2,
           y * tileSize + tileSize / 2,
@@ -49,6 +55,7 @@ export class TemperateMap {
         }
       }
       this.tiles.push(row);
+      row.forEach((tile, x) => { if (tile.resourceItemId) this.updateResourceAppearance(x, y); });
     }
 
     this.scene.physics.world.setBounds(0, 0, widthInTiles * tileSize, heightInTiles * tileSize);
@@ -175,18 +182,92 @@ export class TemperateMap {
   }
 
   resourceAt(x, y) {
-    const itemId = this.tiles[y]?.[x]?.resourceItemId;
-    return itemId && this.items[itemId]?.mineable === true ? itemId : null;
+    const tile = this.tiles[y]?.[x];
+    const itemId = tile?.resourceItemId;
+    return itemId && (tile.remainingYield ?? 1) > 0 && this.items[itemId]?.mineable === true ? itemId : null;
   }
 
+  resourceNodeAt(x, y) {
+    const tile = this.tiles[y]?.[x];
+    return tile?.resourceItemId ? tile : null;
+  }
+
+  // A mining action removes one unit. Plants remain as dim stubs until their timer expires.
+  mineResourceUnit(x, y, now = Date.now()) {
+    const tile = this.tiles[y]?.[x];
+    const itemId = tile?.resourceItemId;
+    if (!itemId || (tile.remainingYield ?? 1) <= 0 || this.items[itemId]?.mineable !== true) return null;
+    tile.remainingYield ??= 1;
+    tile.totalYield ??= tile.remainingYield;
+    tile.remainingYield -= 1;
+    if (tile.remainingYield > 0) {
+      this.updateResourceAppearance(x, y);
+      return itemId;
+    }
+    const regrowDelay = this.resourceSettings?.[itemId]?.regrowMilliseconds;
+    if (this.items[itemId].resourceKind === 'plant' && Number.isFinite(regrowDelay)) {
+      tile.regrowAt = now + regrowDelay;
+      this.updateResourceAppearance(x, y);
+    } else {
+      tile.resourceItemId = null;
+      tile.regrowAt = null;
+      this.resourceSprites.get(`${x},${y}`)?.destroy();
+      this.resourceSprites.delete(`${x},${y}`);
+    }
+    return itemId;
+  }
+
+  // Used when clearing the landing area or restoring a permanently depleted mineral.
   removeResource(x, y) {
     const tile = this.tiles[y]?.[x];
     const itemId = tile?.resourceItemId;
     if (!itemId || this.items[itemId]?.mineable !== true) return null;
     tile.resourceItemId = null;
+    tile.remainingYield = 0;
+    tile.regrowAt = null;
     this.resourceSprites.get(`${x},${y}`)?.destroy();
     this.resourceSprites.delete(`${x},${y}`);
     return itemId;
+  }
+
+  updateResourceAppearance(x, y) {
+    const tile = this.tiles[y]?.[x];
+    const sprite = this.resourceSprites.get(`${x},${y}`);
+    if (!tile || !sprite) return;
+    if (tile.remainingYield <= 0) {
+      sprite.setScale?.(0.55);
+      sprite.setAlpha?.(0.35);
+      return;
+    }
+    const range = this.resourceSettings?.[tile.resourceItemId]?.yieldRange || [1, 1];
+    const ratio = tile.remainingYield / Math.max(1, range[1]);
+    const scale = ratio <= 1 / 3 ? 0.7 : ratio <= 2 / 3 ? 0.85 : 1;
+    sprite.setScale?.(scale);
+    sprite.setAlpha?.(ratio <= 1 / 3 ? 0.7 : ratio <= 2 / 3 ? 0.85 : 1);
+  }
+
+  updateRegrowth(now = Date.now()) {
+    this.tiles.forEach((row, y) => row.forEach((tile, x) => {
+      if (!tile.resourceItemId || tile.remainingYield > 0 || !Number.isFinite(tile.regrowAt)
+        || now < tile.regrowAt) return;
+      const range = this.resourceSettings[tile.resourceItemId]?.yieldRange || [1, 1];
+      tile.totalYield = range[1];
+      tile.remainingYield = tile.totalYield;
+      tile.regrowAt = null;
+      this.updateResourceAppearance(x, y);
+      console.log(`Resource regrew: ${tile.resourceItemId} at (${x}, ${y}), yield ${tile.totalYield}`);
+    }));
+  }
+
+  restoreResourceNode(x, y, state) {
+    const tile = this.tiles[y]?.[x];
+    if (!tile) return;
+    if (!state.resourceItemId) { this.removeResource(x, y); return; }
+    tile.resourceItemId = state.resourceItemId;
+    tile.remainingYield = state.remainingYield;
+    tile.totalYield = state.totalYield;
+    tile.regrowAt = state.regrowAt ?? null;
+    this.updateResourceAppearance(x, y);
   }
 
   findPodCenter() {
