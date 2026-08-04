@@ -21,7 +21,8 @@ export class OxygenSystem {
 
   isSealTile(x, y) {
     const part = this.map.baseAt(x, y);
-    return part === 'wall' || part === 'door';
+    return part === 'wall' || part === 'door' || this.map.isPodHull?.(x, y)
+      || this.map.isPodDoor?.(x, y);
   }
 
   // Flood every open tile. A component is airtight only when it never touches an edge.
@@ -93,10 +94,9 @@ export class OxygenSystem {
 
   oxygenState() {
     const tile = this.player.currentTile();
-    const pod = this.map.landingPod;
-    const atPod = pod && Math.abs(tile.x - pod.x) + Math.abs(tile.y - pod.y) <= 1;
+    const atStation = this.map.isRechargeStation?.(tile.x, tile.y);
     const region = this.tileRegions.get(`${tile.x},${tile.y}`);
-    if (atPod) return 'pod-refill';
+    if (atStation) return 'station-refill';
     if (region?.hasGenerator) return 'room-refill';
     if (region) return 'sealed-drain';
     return 'outdoor-drain';
@@ -105,6 +105,8 @@ export class OxygenSystem {
   update(deltaSeconds) {
     const state = this.oxygenState();
     if (state !== this.state) {
+      if (state === 'station-refill') console.log('Suit recharge station: refill started');
+      if (this.state === 'station-refill') console.log('Suit recharge station: refill stopped');
       console.log(`Oxygen state: ${this.state || 'start'} -> ${state}`);
       this.state = state;
       this.player.sprite?.setTexture?.(state.endsWith('refill') ? 'playerNoHelmet' : 'player');

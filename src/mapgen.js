@@ -56,24 +56,61 @@ export class TemperateMap {
     this.placeLandingPod();
   }
 
-  // The indestructible pod marks the spawn and provides the first oxygen refuge.
+  // The five-tile pod has a solid center and three solid arms, with its south arm as a door.
   placeLandingPod() {
-    const tile = this.findWalkableStart();
-    this.removeResource(tile.x, tile.y);
-    this.landingPod = tile;
+    const center = this.findPodCenter();
+    const hullTiles = [
+      center,
+      { x: center.x - 1, y: center.y },
+      { x: center.x + 1, y: center.y },
+      { x: center.x, y: center.y - 1 },
+    ];
+    const door = { x: center.x, y: center.y + 1 };
+    const station = { x: center.x + 1, y: center.y + 1 };
+    const spawn = { x: center.x, y: center.y + 2 };
+    this.landingPod = { center, hullTiles, door, station, spawn };
+
+    // Flatten the complete footprint and door approach so every seed starts safely.
+    [...hullTiles, door, station, spawn].forEach(({ x, y }) => {
+      this.removeResource(x, y);
+      this.removeBase(x, y);
+      this.tiles[y][x].terrain = 'terrainGrass';
+      this.scene?.add?.image(
+        x * this.settings.tileSize + this.settings.tileSize / 2,
+        y * this.settings.tileSize + this.settings.tileSize / 2,
+        'terrainGrass',
+      );
+    });
     const size = this.settings.tileSize;
-    this.scene?.add?.image(tile.x * size + size / 2, tile.y * size + size / 2, 'landingPod')
-      .setDepth(1);
+    hullTiles.forEach(({ x, y }) => this.addPodSprite(x, y, 'landingPodHull', size));
+    this.addPodSprite(door.x, door.y, 'landingPodDoor', size);
+    this.addPodSprite(station.x, station.y, 'suitRechargeStation', size);
+  }
+
+  addPodSprite(x, y, texture, size) {
+    this.scene?.add?.image(x * size + size / 2, y * size + size / 2, texture)?.setDepth(1);
+  }
+
+  isPodHull(x, y) {
+    return this.landingPod?.hullTiles.some((tile) => tile.x === x && tile.y === y) || false;
+  }
+
+  isPodDoor(x, y) {
+    return this.landingPod?.door.x === x && this.landingPod?.door.y === y;
+  }
+
+  isRechargeStation(x, y) {
+    return this.landingPod?.station.x === x && this.landingPod?.station.y === y;
   }
 
   isLandingPod(x, y) {
-    return this.landingPod?.x === x && this.landingPod?.y === y;
+    return this.isPodHull(x, y) || this.isPodDoor(x, y) || this.isRechargeStation(x, y);
   }
 
   isWalkable(x, y) {
     const baseItemId = this.baseAt(x, y);
     return Boolean(this.tiles[y]?.[x]) && this.tiles[y][x].terrain !== 'terrainWater'
-      && !this.items[baseItemId]?.blocksMovement;
+      && !this.isPodHull(x, y) && !this.items[baseItemId]?.blocksMovement;
   }
 
   baseAt(x, y) {
@@ -118,18 +155,18 @@ export class TemperateMap {
     return itemId;
   }
 
-  findWalkableStart() {
+  findPodCenter() {
     const centerX = Math.floor(this.settings.widthInTiles / 2);
     const centerY = Math.floor(this.settings.heightInTiles / 2);
-    if (this.isWalkable(centerX, centerY)) return { x: centerX, y: centerY };
+    // Keeping two clear rows below the center leaves room for the door and player spawn.
+    return {
+      x: Math.max(1, Math.min(this.settings.widthInTiles - 2, centerX)),
+      y: Math.max(1, Math.min(this.settings.heightInTiles - 3, centerY)),
+    };
+  }
 
-    for (let radius = 1; radius < this.settings.widthInTiles; radius += 1) {
-      for (let y = centerY - radius; y <= centerY + radius; y += 1) {
-        for (let x = centerX - radius; x <= centerX + radius; x += 1) {
-          if (this.isWalkable(x, y)) return { x, y };
-        }
-      }
-    }
-    return { x: 0, y: 0 };
+  findWalkableStart() {
+    if (this.landingPod) return { ...this.landingPod.spawn };
+    return this.findPodCenter();
   }
 }
