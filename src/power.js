@@ -25,6 +25,9 @@ export class PowerGrid {
     return [...this.consumers.values()].reduce((total, draw) => total + draw, 0);
   }
 
+  // Brownout allocation arrives next; for now every consumer runs if any supply exists.
+  hasPower() { return this.generationPerSecond() + this.battery > 0; }
+
   batteryPercent() { return (this.battery / this.settings.batteryCapacity) * 100; }
 
   update(deltaSeconds) {

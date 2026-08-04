@@ -1,6 +1,6 @@
 // Provides HUD buttons and full-screen, touch-friendly inventory and crafting overlays.
 export class GameUI {
-  constructor(scene, inventory, crafting, items, settings, mining, building, oxygen, dayNight, power) {
+  constructor(scene, inventory, crafting, items, settings, mining, building, oxygen, dayNight, power, temperature) {
     this.scene = scene;
     this.inventory = inventory;
     this.crafting = crafting;
@@ -14,6 +14,7 @@ export class GameUI {
     this.oxygen = oxygen;
     this.dayNight = dayNight;
     this.power = power;
+    this.temperature = temperature;
 
     this.oxygenLabel = scene.add.text(0, 0, 'O₂', {
       color: '#ffffff', fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold',
@@ -25,6 +26,11 @@ export class GameUI {
     }).setDepth(20).setScrollFactor(0);
     this.healthBack = scene.add.rectangle(0, 0, 150, 10, 0x25333d).setOrigin(0).setDepth(20).setScrollFactor(0);
     this.healthBar = scene.add.rectangle(0, 0, 150, 10, 0xd45454).setOrigin(0).setDepth(21).setScrollFactor(0);
+    this.suitLabel = scene.add.text(0, 0, 'SUIT', {
+      color: '#ffffff', fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold',
+    }).setDepth(20).setScrollFactor(0);
+    this.suitBack = scene.add.rectangle(0, 0, 150, 10, 0x25333d).setOrigin(0).setDepth(20).setScrollFactor(0);
+    this.suitBar = scene.add.rectangle(0, 0, 150, 10, 0xe0b955).setOrigin(0).setDepth(21).setScrollFactor(0);
     oxygen.onChange(() => this.updateSurvivalBars());
     this.cycleLabel = scene.add.text(0, 0, '', {
       color: '#fff1ad', fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold',
@@ -36,6 +42,11 @@ export class GameUI {
     }).setDepth(20).setScrollFactor(0);
     dayNight.onChange(() => this.updatePowerReadout());
     power.onChange(() => this.updatePowerReadout());
+    this.temperatureLabel = scene.add.text(0, 0, '', {
+      color: '#bde9ff', fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold',
+      backgroundColor: '#25333dcc', padding: { x: 6, y: 4 },
+    }).setDepth(20).setScrollFactor(0);
+    temperature.onChange(() => this.updateTemperatureReadout());
 
     this.inventoryButton = scene.add.text(0, 0, 'Inventory', {
       backgroundColor: '#25333d', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '18px',
@@ -80,6 +91,7 @@ export class GameUI {
     this.updateQueueButtons(mining.queue, mining.paused);
     this.updateSurvivalBars();
     this.updatePowerReadout();
+    this.updateTemperatureReadout();
   }
 
   updatePowerReadout() {
@@ -92,6 +104,14 @@ export class GameUI {
   updateSurvivalBars() {
     this.oxygenBar.scaleX = this.oxygen.oxygen / this.oxygen.settings.capacitySeconds;
     this.healthBar.scaleX = this.oxygen.health / this.oxygen.player.settings.healthCapacity;
+  }
+
+  updateTemperatureReadout() {
+    this.suitBar.scaleX = this.temperature.suitPower / this.temperature.settings.suitPowerCapacity;
+    const danger = this.temperature.ambientTemperature < this.temperature.settings.safeMinimumCelsius
+      && !this.temperature.isPlayerWarm();
+    this.temperatureLabel.setText(`${danger ? '\u2744' : '\u25cf'} ${this.temperature.ambientTemperature.toFixed(1)}\u00b0C`);
+    this.temperatureLabel.setColor(danger ? '#ff7777' : '#bde9ff');
   }
 
   makeQueueButton(label, color, action) {
@@ -129,8 +149,12 @@ export class GameUI {
     this.healthLabel?.setPosition(this.settings.screenPadding, meterY + 17);
     this.healthBack?.setPosition(meterX, meterY + 20);
     this.healthBar?.setPosition(meterX, meterY + 20);
-    this.cycleLabel?.setPosition(this.settings.screenPadding, meterY + 38);
-    this.powerLabel?.setPosition(this.settings.screenPadding, meterY + 68);
+    this.suitLabel?.setPosition(this.settings.screenPadding, meterY + 37);
+    this.suitBack?.setPosition(meterX, meterY + 40);
+    this.suitBar?.setPosition(meterX, meterY + 40);
+    this.temperatureLabel?.setPosition(this.settings.screenPadding, meterY + 58);
+    this.cycleLabel?.setPosition(this.settings.screenPadding, meterY + 88);
+    this.powerLabel?.setPosition(this.settings.screenPadding, meterY + 118);
     const width = this.scene.scale.gameSize?.width || this.scene.scale.width;
     const height = this.scene.scale.gameSize?.height || this.scene.scale.height;
     const buttonSize = this.settings.touchTargetSize;
