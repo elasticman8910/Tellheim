@@ -1,6 +1,6 @@
 // Provides HUD buttons and full-screen, touch-friendly inventory and crafting overlays.
 export class GameUI {
-  constructor(scene, inventory, crafting, items, settings, mining, building, oxygen) {
+  constructor(scene, inventory, crafting, items, settings, mining, building, oxygen, dayNight, power) {
     this.scene = scene;
     this.inventory = inventory;
     this.crafting = crafting;
@@ -12,6 +12,8 @@ export class GameUI {
     this.building = building;
     this.paletteObjects = [];
     this.oxygen = oxygen;
+    this.dayNight = dayNight;
+    this.power = power;
 
     this.oxygenLabel = scene.add.text(0, 0, 'O₂', {
       color: '#ffffff', fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold',
@@ -24,6 +26,16 @@ export class GameUI {
     this.healthBack = scene.add.rectangle(0, 0, 150, 10, 0x25333d).setOrigin(0).setDepth(20).setScrollFactor(0);
     this.healthBar = scene.add.rectangle(0, 0, 150, 10, 0xd45454).setOrigin(0).setDepth(21).setScrollFactor(0);
     oxygen.onChange(() => this.updateSurvivalBars());
+    this.cycleLabel = scene.add.text(0, 0, '', {
+      color: '#fff1ad', fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold',
+      backgroundColor: '#25333dcc', padding: { x: 6, y: 4 },
+    }).setDepth(20).setScrollFactor(0);
+    this.powerLabel = scene.add.text(0, 0, '', {
+      color: '#d9f0ff', fontFamily: 'sans-serif', fontSize: '13px',
+      backgroundColor: '#25333dcc', padding: { x: 6, y: 4 },
+    }).setDepth(20).setScrollFactor(0);
+    dayNight.onChange(() => this.updatePowerReadout());
+    power.onChange(() => this.updatePowerReadout());
 
     this.inventoryButton = scene.add.text(0, 0, 'Inventory', {
       backgroundColor: '#25333d', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '18px',
@@ -67,6 +79,14 @@ export class GameUI {
     this.layout();
     this.updateQueueButtons(mining.queue, mining.paused);
     this.updateSurvivalBars();
+    this.updatePowerReadout();
+  }
+
+  updatePowerReadout() {
+    const icon = ['day', 'dawn'].includes(this.dayNight.phase) ? '\u2600' : '\u263e';
+    const name = this.dayNight.phase[0].toUpperCase() + this.dayNight.phase.slice(1);
+    this.cycleLabel.setText(`${icon} ${name} ${Math.ceil(this.dayNight.timeRemaining())}s`);
+    this.powerLabel.setText(`PWR +${this.power.generationPerSecond().toFixed(1)}  -${this.power.drawPerSecond().toFixed(1)}  BAT ${this.power.batteryPercent().toFixed(0)}%`);
   }
 
   updateSurvivalBars() {
@@ -109,6 +129,8 @@ export class GameUI {
     this.healthLabel?.setPosition(this.settings.screenPadding, meterY + 17);
     this.healthBack?.setPosition(meterX, meterY + 20);
     this.healthBar?.setPosition(meterX, meterY + 20);
+    this.cycleLabel?.setPosition(this.settings.screenPadding, meterY + 38);
+    this.powerLabel?.setPosition(this.settings.screenPadding, meterY + 68);
     const width = this.scene.scale.gameSize?.width || this.scene.scale.width;
     const height = this.scene.scale.gameSize?.height || this.scene.scale.height;
     const buttonSize = this.settings.touchTargetSize;

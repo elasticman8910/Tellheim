@@ -20,6 +20,22 @@
     "refillPerSecond": 8,
     "healthDrainPerSecond": 10
   },
+  "dayNight": {
+    "dayDurationSeconds": 300,
+    "nightDurationSeconds": 180,
+    "dawnDurationSeconds": 30,
+    "duskDurationSeconds": 30,
+    "nightOverlayMaximumAlpha": 0.58
+  },
+  "power": {
+    "solarGenerationPerSecond": 5,
+    "batteryCapacity": 1200,
+    "batteryStartingCharge": 600,
+    "consumerDrawPerSecond": {
+      "lifeSupport": 2,
+      "suitRack": 1
+    }
+  },
   "mining": {
     "delayMilliseconds": 450,
     "maximumTileDistance": 1,
