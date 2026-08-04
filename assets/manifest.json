@@ -45,13 +45,33 @@
     "width": 32,
     "height": 32
   },
-  "suitRechargeStation": {
+  "podFloor": {
+    "type": "generated",
+    "color": "#71879a",
+    "borderColor": "#bdcbd6",
+    "borderWidth": 2,
+    "width": 32,
+    "height": 32
+  },
+  "podSuitRack": {
     "type": "generated",
     "color": "#35c991",
     "borderColor": "#d7fff0",
     "borderWidth": 3,
     "width": 32,
     "height": 32
+  },
+  "podThermalControl": {
+    "type": "generated", "color": "#e8793e", "borderColor": "#ffd0ac", "borderWidth": 3,
+    "width": 32, "height": 32
+  },
+  "podBattery": {
+    "type": "generated", "color": "#d8b83e", "borderColor": "#fff1a6", "borderWidth": 3,
+    "width": 32, "height": 32
+  },
+  "podLifeSupport": {
+    "type": "generated", "color": "#36c9d6", "borderColor": "#d9ffff", "borderWidth": 3,
+    "width": 32, "height": 32
   },
   "sealedTint": {
     "type": "generated",
@@ -125,7 +145,7 @@
     "width": 32,
     "height": 32
   },
-  "baseOxygenGenerator": {
+  "baseLifeSupportUnit": {
     "type": "generated",
     "color": "#36c9d6",
     "borderColor": "#d9ffff",

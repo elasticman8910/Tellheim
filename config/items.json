@@ -96,10 +96,10 @@
       "output": { "itemId": "door", "quantity": 1 }
     }
   },
-  "oxygenGenerator": {
-    "id": "oxygenGenerator",
-    "name": "Oxygen Generator",
-    "spriteKey": "baseOxygenGenerator",
+  "lifeSupportUnit": {
+    "id": "lifeSupportUnit",
+    "name": "Life Support Unit",
+    "spriteKey": "baseLifeSupportUnit",
     "placeable": true,
     "blocksMovement": false,
     "recipe": {
@@ -108,7 +108,7 @@
         { "itemId": "stoneSlab", "quantity": 3 },
         { "itemId": "wovenFiber", "quantity": 2 }
       ],
-      "output": { "itemId": "oxygenGenerator", "quantity": 1 }
+      "output": { "itemId": "lifeSupportUnit", "quantity": 1 }
     }
   },
   "pickaxe": {
