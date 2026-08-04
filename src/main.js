@@ -37,10 +37,13 @@ class TemperateScene extends Phaser.Scene {
     this.crafting = new Crafting(this.inventory, items);
     this.mining = new Mining(this.map, this.player, this.inventory, balance.mining);
     this.building = new Building(this.map, this.player, this.inventory, items);
-    this.oxygen = new OxygenSystem(this, this.map, this.player, balance.oxygen);
     this.dayNight = new DayNightCycle(this, balance.dayNight);
     this.power = new PowerGrid(this.dayNight, balance.power);
-    this.power.registerConsumer('lifeSupport', balance.power.consumerDrawPerSecond.lifeSupport);
+    this.oxygen = new OxygenSystem(
+      this, this.map, this.player, balance.oxygen,
+      this.power, balance.power.consumerDrawPerSecond,
+    );
+    this.building.setOutdoorCheck((x, y) => !this.oxygen.tileRegions.has(`${x},${y}`));
     this.temperature = new TemperatureSystem(
       this.map, this.player, this.dayNight, this.power, this.oxygen,
       balance.temperature, balance.power.consumerDrawPerSecond,
@@ -48,6 +51,8 @@ class TemperateScene extends Phaser.Scene {
     this.building.onStructureChange((change) => {
       this.oxygen.recompute(change);
       this.temperature.recompute();
+      this.power.setSolarPanels([...this.map.baseTiles.values()]
+        .filter(({ itemId }) => itemId === 'solarPanel').length);
     });
     this.ui = new GameUI(
       this, this.inventory, this.crafting, items, balance.ui, this.mining, this.building, this.oxygen,
@@ -73,10 +78,11 @@ class TemperateScene extends Phaser.Scene {
   update() {
     this.player.update();
     this.mining.update();
-    this.oxygen.update(this.game.loop.delta / 1000);
     this.dayNight.update(this.game.loop.delta / 1000);
     this.temperature.update(this.game.loop.delta / 1000);
     this.power.update(this.game.loop.delta / 1000);
+    this.temperature.recompute();
+    this.oxygen.update(this.game.loop.delta / 1000);
   }
 }
 

@@ -99,6 +99,9 @@ export class GameUI {
     const name = this.dayNight.phase[0].toUpperCase() + this.dayNight.phase.slice(1);
     this.cycleLabel.setText(`${icon} ${name} ${Math.ceil(this.dayNight.timeRemaining())}s`);
     this.powerLabel.setText(`PWR +${this.power.generationPerSecond().toFixed(1)}  -${this.power.drawPerSecond().toFixed(1)}  BAT ${this.power.batteryPercent().toFixed(0)}%`);
+    const warning = this.power.batteryDraining || this.power.brownout;
+    this.powerLabel.setColor(warning ? '#ff6868' : '#d9f0ff');
+    this.powerLabel.setAlpha(warning && Math.floor(Date.now() / 400) % 2 ? 0.45 : 1);
   }
 
   updateSurvivalBars() {

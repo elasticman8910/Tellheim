@@ -32,9 +32,17 @@ export class TemperatureSystem {
     return region.tiles.map(({ x, y }) => `${x},${y}`).sort().join('|');
   }
 
+  regionHasPodObject(region, objectId) {
+    const directions = [[0, 0], [1, 0], [-1, 0], [0, 1], [0, -1]];
+    return region.tiles.some(({ x, y }) => directions.some(([dx, dy]) =>
+      this.map.podObjectAt?.(x + dx, y + dy)?.id === objectId));
+  }
+
   regionHasHeatSource(region) {
-    return region.tiles.some(({ x, y }) => this.map.baseAt(x, y) === 'heater'
-      || this.map.podObjectAt?.(x, y)?.id === 'thermalControl');
+    return region.tiles.some(({ x, y }) => (this.map.baseAt(x, y) === 'heater'
+      && this.power.isPowered(`heater:${x},${y}`)))
+      || (this.regionHasPodObject(region, 'thermalControl')
+        && this.power.isPowered('thermalControl'));
   }
 
   recompute() {
@@ -60,11 +68,19 @@ export class TemperatureSystem {
     let hasThermalControl = false;
     (this.survival.regions || []).forEach((region) => region.tiles.forEach(({ x, y }) => {
       if (this.map.baseAt(x, y) === 'heater') {
-        this.power.registerConsumer(`heater:${x},${y}`, this.powerDraw.heater);
+        this.power.registerConsumer(`heater:${x},${y}`, {
+          drawPerSecond: this.powerDraw.heater,
+          type: 'heater',
+          onPowerChange: (powered) => this.map.setBasePowered?.(x, y, powered),
+        });
       }
-      if (this.map.podObjectAt?.(x, y)?.id === 'thermalControl') hasThermalControl = true;
+      if (this.regionHasPodObject(region, 'thermalControl')) hasThermalControl = true;
     }));
-    if (hasThermalControl) this.power.registerConsumer('thermalControl', this.powerDraw.thermalControl);
+    if (hasThermalControl) this.power.registerConsumer('thermalControl', {
+      drawPerSecond: this.powerDraw.thermalControl,
+      type: 'heater',
+      onPowerChange: (powered) => this.map.setPodObjectPowered?.('thermalControl', powered),
+    });
   }
 
   isPlayerWarm() {
@@ -89,10 +105,16 @@ export class TemperatureSystem {
     this.ambientTemperature = this.calculateAmbient();
     this.recompute();
     const tile = this.player.currentTile();
-    const byRack = this.map.isAdjacentToSuitRack?.(tile.x, tile.y) && this.power.hasPower();
+    const byRack = this.map.isAdjacentToSuitRack?.(tile.x, tile.y);
     if (byRack && this.suitPower < this.settings.suitPowerCapacity) {
-      this.power.registerConsumer('suitRack', this.powerDraw.suitRack);
+      this.power.registerConsumer('suitRack', {
+        drawPerSecond: this.powerDraw.suitRack,
+        type: 'suitRack',
+        onPowerChange: (powered) => this.map.setPodObjectPowered?.('suitRack', powered),
+      });
+      if (this.power.isPowered('suitRack')) {
       this.suitPower += this.settings.suitRackRechargePerSecond * deltaSeconds;
+      }
     } else {
       this.power.unregisterConsumer('suitRack');
     }

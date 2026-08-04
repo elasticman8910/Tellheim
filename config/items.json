@@ -126,6 +126,22 @@
       "output": { "itemId": "heater", "quantity": 1 }
     }
   },
+  "solarPanel": {
+    "id": "solarPanel",
+    "name": "Solar Panel",
+    "spriteKey": "baseSolarPanel",
+    "placeable": true,
+    "outdoorsOnly": true,
+    "blocksMovement": false,
+    "recipe": {
+      "ingredients": [
+        { "itemId": "copperIngot", "quantity": 5 },
+        { "itemId": "stoneSlab", "quantity": 3 },
+        { "itemId": "wovenFiber", "quantity": 2 }
+      ],
+      "output": { "itemId": "solarPanel", "quantity": 1 }
+    }
+  },
   "pickaxe": {
     "id": "pickaxe",
     "name": "Pickaxe",

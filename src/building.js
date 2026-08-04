@@ -9,6 +9,7 @@ export class Building {
     this.selectedItemId = null;
     this.listeners = [];
     this.structureListeners = [];
+    this.outdoorCheck = () => true;
   }
 
   placeableItems() {
@@ -46,6 +47,8 @@ export class Building {
     return true;
   }
 
+  setOutdoorCheck(check) { this.outdoorCheck = check; }
+
   handleTap(worldX, worldY) {
     if (!this.active) return false;
     const size = this.map.settings.tileSize;
@@ -64,6 +67,10 @@ export class Building {
     const playerTile = this.player.currentTile();
     if (!this.selectedItemId || this.inventory.count(this.selectedItemId) < 1
       || (playerTile.x === x && playerTile.y === y)) return false;
+    if (this.items[this.selectedItemId].outdoorsOnly && !this.outdoorCheck(x, y)) {
+      console.log(`Build blocked: ${this.selectedItemId} must be outdoors`);
+      return false;
+    }
     if (!this.map.placeBase(x, y, this.selectedItemId)) return false;
     this.inventory.consume([{ itemId: this.selectedItemId, quantity: 1 }]);
     console.log(`Build place: ${this.selectedItemId} at (${x}, ${y})`);

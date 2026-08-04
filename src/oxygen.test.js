@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { OxygenSystem } from './oxygen.js';
+import { DayNightCycle } from './daynight.js';
+import { PowerGrid } from './power.js';
 import { TemperateMap } from './mapgen.js';
 
 const items = JSON.parse(await readFile(new URL('../config/items.json', import.meta.url)));
@@ -72,3 +74,28 @@ assert.equal(podOxygen.oxygen, 100 + balance.oxygen.refillPerSecond,
   'standing adjacent to the Suit Rack refills even outside the pod seal');
 
 console.log('Verified oxygen drain parity, pod and crafted life support, and Suit Rack adjacency.');
+
+// Powered room air drains slowly during a life-support brownout and refills after recovery.
+const powered = testWorld(7);
+enclose(powered.map, 1, 5);
+powered.map.baseTiles.set('2,2', { itemId: 'lifeSupportUnit' });
+powered.player.tile = { x: 3, y: 3 };
+const cycle = new DayNightCycle(null, balance.dayNight);
+cycle.update(balance.dayNight.dayDurationSeconds + balance.dayNight.duskDurationSeconds);
+const grid = new PowerGrid(cycle, balance.power);
+grid.battery = 0;
+const poweredOxygen = new OxygenSystem(null, powered.map, powered.player, balance.oxygen,
+  grid, balance.power.consumerDrawPerSecond);
+grid.update(1);
+poweredOxygen.oxygen = 100;
+poweredOxygen.update(1);
+assert.equal(poweredOxygen.oxygen, 100 - balance.oxygen.unpoweredRoomDrainPerSecond,
+  'unpowered sealed life support uses the slow room-air drain');
+grid.battery = balance.power.batteryCapacity;
+grid.update(1);
+poweredOxygen.update(1);
+assert.equal(poweredOxygen.oxygen,
+  100 - balance.oxygen.unpoweredRoomDrainPerSecond + balance.oxygen.refillPerSecond,
+  'restored life support refills room oxygen again');
+
+console.log('Verified slow room-air loss and refill after life-support recovery.');
