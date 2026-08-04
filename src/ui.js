@@ -1,6 +1,6 @@
 // Provides HUD buttons and full-screen, touch-friendly inventory and crafting overlays.
 export class GameUI {
-  constructor(scene, inventory, crafting, items, settings, mining) {
+  constructor(scene, inventory, crafting, items, settings, mining, building) {
     this.scene = scene;
     this.inventory = inventory;
     this.crafting = crafting;
@@ -9,6 +9,8 @@ export class GameUI {
     this.open = false;
     this.overlayObjects = [];
     this.mining = mining;
+    this.building = building;
+    this.paletteObjects = [];
 
     this.inventoryButton = scene.add.text(0, 0, 'Inventory', {
       backgroundColor: '#25333d', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '18px',
@@ -28,6 +30,15 @@ export class GameUI {
       event.stopPropagation();
       this.showCrafting();
     });
+    this.buildButton = scene.add.text(0, 0, 'Build', {
+      backgroundColor: '#53616b', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '18px',
+      align: 'center',
+    }).setFixedSize(100, settings.touchTargetSize).setDepth(20).setScrollFactor(0)
+      .setInteractive({ useHandCursor: true });
+    this.buildButton.on('pointerup', (_, __, ___, event) => {
+      event.stopPropagation();
+      this.building.setActive(!this.building.active);
+    });
     this.resumeButton = this.makeQueueButton('Resume', '#3e6680', () => {
       this.mining.resumeQueue('resume-button');
     });
@@ -37,7 +48,9 @@ export class GameUI {
     inventory.onChange(() => {
       if (this.open === 'inventory') this.showInventory();
       if (this.open === 'crafting') this.showCrafting();
+      if (this.building.active) this.showBuildPalette();
     });
+    building.onChange(() => this.showBuildPalette());
     this.layout();
     this.updateQueueButtons(mining.queue, mining.paused);
   }
@@ -68,6 +81,7 @@ export class GameUI {
       this.scene.scale.width - this.settings.screenPadding - 120,
       this.settings.screenPadding,
     );
+    this.buildButton?.setPosition((this.scene.scale.width - 100) / 2, this.settings.screenPadding);
     const width = this.scene.scale.gameSize?.width || this.scene.scale.width;
     const height = this.scene.scale.gameSize?.height || this.scene.scale.height;
     const buttonSize = this.settings.touchTargetSize;
@@ -78,6 +92,48 @@ export class GameUI {
     this.clearQueueButton.setPosition(right - buttonSize, resumeY - buttonSize * 2);
     if (this.open === 'inventory') this.showInventory();
     if (this.open === 'crafting') this.showCrafting();
+    if (this.building?.active) this.showBuildPalette();
+  }
+
+  showBuildPalette() {
+    this.paletteObjects.forEach((object) => object.destroy());
+    this.paletteObjects = [];
+    const active = this.building.active;
+    this.buildButton.setText(active ? 'Done' : 'Build');
+    this.buildButton.setBackgroundColor(active ? '#3e6680' : '#53616b');
+    if (!active) return;
+
+    const owned = this.building.placeableItems()
+      .filter((item) => this.inventory.count(item.id) > 0);
+    const padding = this.settings.screenPadding;
+    const gap = 8;
+    const buttonHeight = this.settings.touchTargetSize;
+    const width = this.scene.scale.width - padding * 2;
+    const buttonWidth = owned.length ? (width - gap * (owned.length - 1)) / owned.length : width;
+    const y = this.scene.scale.height - padding - buttonHeight;
+    const add = (object) => { this.paletteObjects.push(object); return object; };
+
+    if (!owned.length) {
+      add(this.scene.add.text(padding, y, 'Craft a base part to place it', {
+        backgroundColor: '#25333d', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '16px',
+        align: 'center',
+      }).setFixedSize(width, buttonHeight).setDepth(21).setScrollFactor(0));
+      return;
+    }
+
+    owned.forEach((item, index) => {
+      const selected = this.building.selectedItemId === item.id;
+      const button = add(this.scene.add.text(padding + index * (buttonWidth + gap), y,
+        `${item.name} ×${this.inventory.count(item.id)}`, {
+          backgroundColor: selected ? '#3e6680' : '#25333d', color: '#ffffff',
+          fontFamily: 'sans-serif', fontSize: '15px', align: 'center',
+        }).setFixedSize(buttonWidth, buttonHeight).setDepth(21).setScrollFactor(0)
+        .setInteractive({ useHandCursor: true }));
+      button.on('pointerup', (_, __, ___, event) => {
+        event.stopPropagation();
+        this.building.select(item.id);
+      });
+    });
   }
 
   showInventory() {
@@ -128,7 +184,7 @@ export class GameUI {
 
     this.crafting.recipes().forEach((item, index) => {
       const affordable = this.crafting.canCraft(item.recipe);
-      const y = padding + 60 + index * 104;
+      const y = padding + 60 + index * 92;
       const ingredientText = item.recipe.ingredients.map(({ itemId, quantity }) => {
         const ingredient = this.items[itemId];
         return `${ingredient.name}: ${this.inventory.count(itemId)}/${quantity}`;

@@ -5,6 +5,7 @@ export class PlayerController {
     this.map = map;
     this.settings = settings;
     this.path = [];
+    this.destination = null;
     const start = map.findWalkableStart();
     this.sprite = scene.physics.add.image(...this.tileCenter(start), 'player');
     this.sprite.setDisplaySize(settings.width, settings.height).setDepth(2);
@@ -25,9 +26,11 @@ export class PlayerController {
   moveTo(target) {
     if (!this.map.isWalkable(target.x, target.y)) {
       this.path = [];
+      this.destination = null;
       return false;
     }
     this.path = this.findPath(this.currentTile(), target);
+    this.destination = { ...target };
     return this.path.length > 0 || (this.currentTile().x === target.x && this.currentTile().y === target.y);
   }
 
@@ -45,6 +48,7 @@ export class PlayerController {
 
     if (!best) return null;
     this.path = best.path;
+    this.destination = { ...best.target };
     return best.target;
   }
 
@@ -76,6 +80,15 @@ export class PlayerController {
     if (!this.path.length) {
       this.sprite.body.setVelocity(0);
       return;
+    }
+    // A newly placed wall can invalidate a route that was calculated moments earlier.
+    if (!this.map.isWalkable(this.path[0].x, this.path[0].y)) {
+      const destination = this.destination;
+      if (!destination || !this.moveTo(destination)) {
+        this.path = [];
+        this.sprite.body.setVelocity(0);
+        return;
+      }
     }
     const [targetX, targetY] = this.tileCenter(this.path[0]);
     const distance = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, targetX, targetY);

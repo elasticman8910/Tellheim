@@ -65,6 +65,30 @@
     "width": 32,
     "height": 32
   },
+  "baseWall": {
+    "type": "generated",
+    "color": "#53616b",
+    "borderColor": "#9eabb3",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
+  "baseFloor": {
+    "type": "generated",
+    "color": "#71879a",
+    "borderColor": "#bdcbd6",
+    "borderWidth": 2,
+    "width": 32,
+    "height": 32
+  },
+  "baseDoor": {
+    "type": "generated",
+    "color": "#335c78",
+    "borderColor": "#82abc4",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
   "itemPickaxe": {
     "type": "generated",
     "color": "#ffc247",
