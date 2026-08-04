@@ -33,8 +33,20 @@
     "batteryStartingCharge": 600,
     "consumerDrawPerSecond": {
       "lifeSupport": 2,
-      "suitRack": 1
+      "suitRack": 1,
+      "thermalControl": 2,
+      "heater": 3
     }
+  },
+  "temperature": {
+    "dayAmbientCelsius": 18,
+    "nightAmbientCelsius": -12,
+    "daylightCurveExponent": 1.25,
+    "safeMinimumCelsius": 5,
+    "suitPowerCapacity": 100,
+    "suitHeaterDrainPerSecond": 2,
+    "suitRackRechargePerSecond": 12,
+    "coldHealthDrainPerSecond": 6
   },
   "mining": {
     "delayMilliseconds": 450,

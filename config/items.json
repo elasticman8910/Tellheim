@@ -111,6 +111,21 @@
       "output": { "itemId": "lifeSupportUnit", "quantity": 1 }
     }
   },
+  "heater": {
+    "id": "heater",
+    "name": "Heater",
+    "spriteKey": "baseHeater",
+    "placeable": true,
+    "blocksMovement": false,
+    "recipe": {
+      "ingredients": [
+        { "itemId": "copperIngot", "quantity": 3 },
+        { "itemId": "stoneSlab", "quantity": 2 },
+        { "itemId": "wovenFiber", "quantity": 2 }
+      ],
+      "output": { "itemId": "heater", "quantity": 1 }
+    }
+  },
   "pickaxe": {
     "id": "pickaxe",
     "name": "Pickaxe",
