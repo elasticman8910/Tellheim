@@ -11,6 +11,15 @@ export class PlayerController {
     this.sprite.setDisplaySize(settings.width, settings.height).setDepth(2);
     this.sprite.body.setSize(settings.width, settings.height);
     this.sprite.setCollideWorldBounds(true);
+    this.spawnTile = { ...start };
+  }
+
+  respawn() {
+    const [x, y] = this.tileCenter(this.spawnTile);
+    this.path = [];
+    this.destination = null;
+    this.sprite.setPosition(x, y);
+    this.sprite.body.setVelocity(0);
   }
 
   tileCenter(tile) {

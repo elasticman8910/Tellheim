@@ -23,6 +23,26 @@
     "width": 32,
     "height": 48
   },
+  "playerNoHelmet": {
+    "type": "generated",
+    "color": "#72d6b2",
+    "width": 32,
+    "height": 48
+  },
+  "landingPod": {
+    "type": "generated",
+    "color": "#e6a84a",
+    "borderColor": "#fff1bd",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
+  "sealedTint": {
+    "type": "generated",
+    "color": "#477f88",
+    "width": 32,
+    "height": 32
+  },
   "itemStone": {
     "type": "generated",
     "color": "#e8e8f0",
@@ -85,6 +105,14 @@
     "type": "generated",
     "color": "#335c78",
     "borderColor": "#82abc4",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
+  "baseOxygenGenerator": {
+    "type": "generated",
+    "color": "#36c9d6",
+    "borderColor": "#d9ffff",
     "borderWidth": 3,
     "width": 32,
     "height": 32

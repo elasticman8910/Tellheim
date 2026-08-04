@@ -7,6 +7,7 @@ export class TemperateMap {
     this.tiles = [];
     this.resourceSprites = new Map();
     this.baseTiles = new Map();
+    this.landingPod = null;
   }
 
   create() {
@@ -52,6 +53,21 @@ export class TemperateMap {
 
     this.scene.physics.world.setBounds(0, 0, widthInTiles * tileSize, heightInTiles * tileSize);
     this.scene.cameras.main.setBounds(0, 0, widthInTiles * tileSize, heightInTiles * tileSize);
+    this.placeLandingPod();
+  }
+
+  // The indestructible pod marks the spawn and provides the first oxygen refuge.
+  placeLandingPod() {
+    const tile = this.findWalkableStart();
+    this.removeResource(tile.x, tile.y);
+    this.landingPod = tile;
+    const size = this.settings.tileSize;
+    this.scene?.add?.image(tile.x * size + size / 2, tile.y * size + size / 2, 'landingPod')
+      .setDepth(1);
+  }
+
+  isLandingPod(x, y) {
+    return this.landingPod?.x === x && this.landingPod?.y === y;
   }
 
   isWalkable(x, y) {
@@ -69,7 +85,7 @@ export class TemperateMap {
     const key = `${x},${y}`;
     const item = this.items[itemId];
     if (!item?.placeable || !this.tiles[y]?.[x] || this.tiles[y][x].terrain === 'terrainWater'
-      || this.resourceAt(x, y) || this.baseTiles.has(key)) return false;
+      || this.resourceAt(x, y) || this.baseTiles.has(key) || this.isLandingPod(x, y)) return false;
     const size = this.settings.tileSize;
     const sprite = this.scene?.add?.image
       ? this.scene.add.image(x * size + size / 2, y * size + size / 2, item.spriteKey).setDepth(1)
