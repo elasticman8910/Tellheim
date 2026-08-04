@@ -53,6 +53,49 @@
       "output": { "itemId": "stoneSlab", "quantity": 1 }
     }
   },
+  "wall": {
+    "id": "wall",
+    "name": "Wall",
+    "spriteKey": "baseWall",
+    "placeable": true,
+    "blocksMovement": true,
+    "recipe": {
+      "ingredients": [
+        { "itemId": "stoneSlab", "quantity": 2 },
+        { "itemId": "copperIngot", "quantity": 1 }
+      ],
+      "output": { "itemId": "wall", "quantity": 1 }
+    }
+  },
+  "floor": {
+    "id": "floor",
+    "name": "Floor",
+    "spriteKey": "baseFloor",
+    "placeable": true,
+    "blocksMovement": false,
+    "recipe": {
+      "ingredients": [
+        { "itemId": "stoneSlab", "quantity": 1 },
+        { "itemId": "wovenFiber", "quantity": 1 }
+      ],
+      "output": { "itemId": "floor", "quantity": 1 }
+    }
+  },
+  "door": {
+    "id": "door",
+    "name": "Door",
+    "spriteKey": "baseDoor",
+    "placeable": true,
+    "blocksMovement": false,
+    "recipe": {
+      "ingredients": [
+        { "itemId": "wovenFiber", "quantity": 1 },
+        { "itemId": "copperIngot", "quantity": 1 },
+        { "itemId": "stoneSlab", "quantity": 1 }
+      ],
+      "output": { "itemId": "door", "quantity": 1 }
+    }
+  },
   "pickaxe": {
     "id": "pickaxe",
     "name": "Pickaxe",

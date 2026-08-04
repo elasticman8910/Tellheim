@@ -6,6 +6,7 @@ export class TemperateMap {
     this.items = items;
     this.tiles = [];
     this.resourceSprites = new Map();
+    this.baseTiles = new Map();
   }
 
   create() {
@@ -54,7 +55,36 @@ export class TemperateMap {
   }
 
   isWalkable(x, y) {
-    return Boolean(this.tiles[y]?.[x]) && this.tiles[y][x].terrain !== 'terrainWater';
+    const baseItemId = this.baseAt(x, y);
+    return Boolean(this.tiles[y]?.[x]) && this.tiles[y][x].terrain !== 'terrainWater'
+      && !this.items[baseItemId]?.blocksMovement;
+  }
+
+  baseAt(x, y) {
+    return this.baseTiles.get(`${x},${y}`)?.itemId || null;
+  }
+
+  // Base parts use a separate layer, leaving seeded terrain unchanged underneath.
+  placeBase(x, y, itemId) {
+    const key = `${x},${y}`;
+    const item = this.items[itemId];
+    if (!item?.placeable || !this.tiles[y]?.[x] || this.tiles[y][x].terrain === 'terrainWater'
+      || this.resourceAt(x, y) || this.baseTiles.has(key)) return false;
+    const size = this.settings.tileSize;
+    const sprite = this.scene?.add?.image
+      ? this.scene.add.image(x * size + size / 2, y * size + size / 2, item.spriteKey).setDepth(1)
+      : null;
+    this.baseTiles.set(key, { itemId, sprite });
+    return true;
+  }
+
+  removeBase(x, y) {
+    const key = `${x},${y}`;
+    const placed = this.baseTiles.get(key);
+    if (!placed) return null;
+    placed.sprite?.destroy();
+    this.baseTiles.delete(key);
+    return placed.itemId;
   }
 
   resourceAt(x, y) {
