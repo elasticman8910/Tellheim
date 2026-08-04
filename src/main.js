@@ -33,6 +33,7 @@ class TemperateScene extends Phaser.Scene {
     const savedGame = this.saves.load();
     const mapSettings = { ...balance.map, seed: savedGame?.map?.seed || balance.map.seed };
     AssetRegistry.createPlaceholders(this, this.cache.json.get('assets'));
+    AssetRegistry.installFailsafe(this);
     this.debugToggle = new DebugToggle(balance.debug);
     this.map = new TemperateMap(this, mapSettings, items, balance.mining.materials);
     this.map.create();
@@ -53,6 +54,7 @@ class TemperateScene extends Phaser.Scene {
       balance.temperature, balance.power.consumerDrawPerSecond,
     );
     this.saves.restore(this, savedGame);
+    this.map.validatePlacedTextures();
     this.building.onStructureChange((change) => {
       this.oxygen.recompute(change);
       this.temperature.recompute();

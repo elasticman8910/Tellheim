@@ -6,6 +6,7 @@ import { TemperateMap } from './mapgen.js';
 import { Mining } from './mining.js';
 import { handleWorldTap } from './input.js';
 import { GameUI } from './ui.js';
+import { AssetRegistry } from './assets.js';
 
 const items = JSON.parse(await readFile(new URL('../config/items.json', import.meta.url)));
 const manifest = JSON.parse(await readFile(new URL('../assets/manifest.json', import.meta.url)));
@@ -302,5 +303,72 @@ assert.equal(nodeMap.tiles[0][0].remainingYield, 4);
 assert.equal(nodeMap.mineResourceUnit(1, 0, 5000), 'stone');
 nodeMap.updateRegrowth(999999);
 assert.equal(nodeMap.resourceAt(1, 0), null, 'ore never regrows');
+
+
+// Resource rendering must resolve for every item texture and every yield tier/state.
+function makeRenderScene(validKeys, captured = []) {
+  return {
+    textures: { exists: (key) => validKeys.has(key) },
+    add: {
+      image(x, y, key) {
+        const sprite = {
+          x, y, key, visible: true, alpha: 1, scale: 1,
+          setDepth() { return this; },
+          setScale(value) { this.scale = value; return this; },
+          setAlpha(value) { this.alpha = value; return this; },
+          setTexture(nextKey) { this.key = nextKey; return this; },
+          destroy() { this.destroyed = true; },
+        };
+        captured.push(sprite);
+        return sprite;
+      },
+    },
+  };
+}
+
+const validTextureKeys = new Set(Object.keys(manifest));
+const renderScene = makeRenderScene(validTextureKeys);
+const renderMap = Object.create(TemperateMap.prototype);
+renderMap.scene = renderScene;
+renderMap.settings = { tileSize: 32 };
+renderMap.items = items;
+renderMap.resourceSettings = Object.fromEntries(mineableItems.map((item) => [item.id, { yieldRange: [1, 3] }]));
+renderMap.resourceSprites = new Map();
+renderMap.baseTiles = new Map();
+
+Object.values(items).forEach((item, itemIndex) => {
+  renderMap.tiles = [[{ resourceItemId: item.id, remainingYield: 3, totalYield: 3, regrowAt: null }]];
+  assert.equal(renderMap.textureForItem(item.id, `test item ${item.id}`), item.spriteKey,
+    `${item.id} resolves its registered item texture`);
+  for (let remainingYield = 3; remainingYield >= 0; remainingYield -= 1) {
+    renderMap.tiles[0][0].remainingYield = remainingYield;
+    renderMap.updateResourceAppearance(0, 0);
+    const sprite = renderMap.resourceSprites.get('0,0');
+    assert.ok(sprite, `${item.id} creates a visible node sprite at yield ${remainingYield}`);
+    assert.ok(validTextureKeys.has(sprite.key), `${item.id} yield ${remainingYield} uses a registered texture`);
+  }
+  renderMap.resourceSprites.clear();
+  if (item.mineable === true) {
+    renderMap.tiles = [[{ resourceItemId: item.id, remainingYield: 3, totalYield: 3, regrowAt: null }]];
+    for (let step = 2; step > 0; step -= 1) {
+      renderMap.mineResourceUnit(0, 0, itemIndex * 100 + step);
+      const sprite = renderMap.resourceSprites.get('0,0');
+      assert.ok(sprite, `${item.id} remains visible after partial mining to ${step}`);
+      assert.ok(validTextureKeys.has(sprite.key), `${item.id} partial mining keeps a registered texture`);
+    }
+  }
+  renderMap.resourceSprites.clear();
+});
+
+const fallbackLogs = [];
+const fallbackScene = makeRenderScene(new Set(['debugMissingTextureMagenta']));
+const originalError = console.error;
+console.error = (message) => fallbackLogs.push(message);
+assert.equal(AssetRegistry.resolveTextureKey(fallbackScene, 'renamedMissingTexture', 'regression'),
+  'debugMissingTextureMagenta');
+console.error = originalError;
+assert.ok(fallbackLogs.some((message) => message.includes('renamedMissingTexture')),
+  'missing textures log the bad key before using the magenta fallback');
+
 
 console.log(`Verified ${mineCount} isolated rewards for each of ${mineableItems.length} resource types.`);
