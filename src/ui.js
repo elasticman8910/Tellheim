@@ -1,6 +1,6 @@
 // Provides HUD buttons and full-screen, touch-friendly inventory and crafting overlays.
 export class GameUI {
-  constructor(scene, inventory, crafting, items, settings, mining, building, oxygen, dayNight, power, temperature) {
+  constructor(scene, inventory, crafting, items, settings, mining, building, oxygen, dayNight, power, temperature, resetGame = null) {
     this.scene = scene;
     this.inventory = inventory;
     this.crafting = crafting;
@@ -15,6 +15,7 @@ export class GameUI {
     this.dayNight = dayNight;
     this.power = power;
     this.temperature = temperature;
+    this.resetGame = resetGame;
 
     this.oxygenLabel = scene.add.text(0, 0, 'O₂', {
       color: '#ffffff', fontFamily: 'sans-serif', fontSize: '14px', fontStyle: 'bold',
@@ -74,6 +75,14 @@ export class GameUI {
     this.buildButton.on('pointerup', (_, __, ___, event) => {
       event.stopPropagation();
       this.building.setActive(!this.building.active);
+    });
+    this.menuButton = scene.add.text(0, 0, 'Menu', {
+      backgroundColor: '#25333d', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '14px', align: 'center',
+    }).setFixedSize(settings.touchTargetSize, settings.touchTargetSize).setOrigin(1, 1)
+      .setDepth(20).setScrollFactor(0).setInteractive({ useHandCursor: true });
+    this.menuButton.on('pointerup', (_, __, ___, event) => {
+      event.stopPropagation();
+      this.showCornerMenu();
     });
     this.resumeButton = this.makeQueueButton('Resume', '#3e6680', () => {
       this.mining.resumeQueue('resume-button');
@@ -166,6 +175,7 @@ export class GameUI {
     const resumeY = height - this.settings.screenPadding - buttonSize * 2;
     this.resumeButton.setPosition(right - 100, resumeY);
     this.clearQueueButton.setPosition(right - buttonSize, resumeY - buttonSize * 2);
+    this.menuButton?.setPosition(right, height - this.settings.screenPadding);
     if (this.open === 'inventory') this.showInventory();
     if (this.open === 'crafting') this.showCrafting();
     if (this.building?.active) this.showBuildPalette();
@@ -243,6 +253,31 @@ export class GameUI {
       event.stopPropagation();
       this.closeInventory();
     });
+  }
+
+  showCornerMenu(confirming = false) {
+    this.closeOverlay();
+    this.open = 'menu';
+    const add = (object) => { this.overlayObjects.push(object); return object; };
+    const size = this.settings.touchTargetSize;
+    const right = this.scene.scale.width - this.settings.screenPadding;
+    const bottom = this.scene.scale.height - this.settings.screenPadding - size - 8;
+    const label = confirming ? 'Confirm reset' : 'Reset';
+    const reset = add(this.scene.add.text(right, bottom, label, {
+      backgroundColor: confirming ? '#a32929' : '#53616b', color: '#ffffff',
+      fontFamily: 'sans-serif', fontSize: '16px', align: 'center',
+    }).setFixedSize(confirming ? 140 : 100, size).setOrigin(1, 1).setDepth(31)
+      .setScrollFactor(0).setInteractive({ useHandCursor: true }));
+    reset.on('pointerup', (_, __, ___, event) => {
+      event.stopPropagation();
+      if (confirming) this.resetGame?.();
+      else this.showCornerMenu(true);
+    });
+    const cancel = add(this.scene.add.text(right, bottom - size - 8, 'Cancel', {
+      backgroundColor: '#25333d', color: '#ffffff', fontFamily: 'sans-serif', fontSize: '16px', align: 'center',
+    }).setFixedSize(100, size).setOrigin(1, 1).setDepth(31).setScrollFactor(0)
+      .setInteractive({ useHandCursor: true }));
+    cancel.on('pointerup', (_, __, ___, event) => { event.stopPropagation(); this.closeOverlay(); });
   }
 
   showCrafting() {

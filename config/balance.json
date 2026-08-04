@@ -69,5 +69,8 @@
   "debug": {
     "cornerSizePixels": 72,
     "tripleTapWindowMilliseconds": 650
+  },
+  "save": {
+    "intervalSeconds": 10
   }
 }

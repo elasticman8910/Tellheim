@@ -3,7 +3,10 @@ export class Crafting {
   constructor(inventory, items) {
     this.inventory = inventory;
     this.items = items;
+    this.listeners = [];
   }
+
+  onCraft(listener) { this.listeners.push(listener); }
 
   recipes() {
     return Object.values(this.items).filter((item) => (
@@ -38,6 +41,7 @@ export class Crafting {
     const output = item.recipe.output;
     this.inventory.add(output.itemId, output.quantity);
     console.log(`Craft succeeded: ${output.itemId} × ${output.quantity}`);
+    this.listeners.forEach((listener) => listener(output.itemId));
     return true;
   }
 }

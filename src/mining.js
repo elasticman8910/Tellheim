@@ -10,7 +10,10 @@ export class Mining {
     this.timer = null;
     this.paused = false;
     this.queueListeners = [];
+    this.completionListeners = [];
   }
+
+  onMineComplete(listener) { this.completionListeners.push(listener); }
 
   onQueueChange(listener) {
     this.queueListeners.push(listener);
@@ -211,6 +214,7 @@ export class Mining {
       if (minedItem) {
         this.inventory.add(minedItem);
         console.log(`Mining completed: ${minedItem} at (${tile.x}, ${tile.y})`);
+        this.completionListeners.forEach((listener) => listener({ ...tile, itemId: minedItem }));
       }
       onComplete?.();
     }, delay);
