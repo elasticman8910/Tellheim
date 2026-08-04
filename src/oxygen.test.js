@@ -15,10 +15,16 @@ function testWorld() {
   map.tiles = Array.from({ length: 7 }, () => Array.from({ length: 7 }, () => ({
     terrain: 'terrainGrass', resourceItemId: null,
   })));
-  map.landingPod = { x: 1, y: 1 };
+  map.landingPod = {
+    center: { x: 1, y: 1 },
+    hullTiles: [{ x: 1, y: 1 }],
+    door: { x: 1, y: 2 },
+    station: { x: 2, y: 2 },
+    spawn: { x: 1, y: 3 },
+  };
   const player = {
     tile: { x: 3, y: 3 }, settings: balance.player,
-    currentTile() { return this.tile; }, respawn() { this.tile = { ...map.landingPod }; },
+    currentTile() { return this.tile; }, respawn() { this.tile = { ...map.landingPod.spawn }; },
     sprite: { setTexture() {} },
   };
   return { map, player };
@@ -48,9 +54,17 @@ oxygen.oxygen = 100;
 oxygen.update(1);
 assert.equal(oxygen.oxygen, 100 + balance.oxygen.refillPerSecond, 'generator refills sealed room');
 
-player.tile = { x: 1, y: 0 };
+player.tile = { ...map.landingPod.station };
 oxygen.oxygen = 100;
 oxygen.update(1);
-assert.equal(oxygen.oxygen, 100 + balance.oxygen.refillPerSecond, 'pod adjacency refills oxygen');
+assert.equal(oxygen.oxygen, 100 + balance.oxygen.refillPerSecond, 'station refills oxygen');
 
-console.log('Verified sealing, breach, sealed generator refill, and pod refill.');
+player.tile = { x: 2, y: 1 };
+oxygen.oxygen = 100;
+oxygen.update(1);
+assert.equal(oxygen.oxygen, 100 - balance.oxygen.outdoorDrainPerSecond,
+  'tiles merely adjacent to the pod do not refill oxygen');
+
+assert.equal(oxygen.isSealTile(1, 1), true, 'pod hull seals flood-fill regions');
+
+console.log('Verified sealing, breach, generator refill, station-only refill, and pod hull sealing.');

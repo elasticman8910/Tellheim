@@ -29,10 +29,26 @@
     "width": 32,
     "height": 48
   },
-  "landingPod": {
+  "landingPodHull": {
     "type": "generated",
-    "color": "#e6a84a",
-    "borderColor": "#fff1bd",
+    "color": "#596873",
+    "borderColor": "#aebbc4",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
+  "landingPodDoor": {
+    "type": "generated",
+    "color": "#2d7691",
+    "borderColor": "#a9e5ef",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
+  "suitRechargeStation": {
+    "type": "generated",
+    "color": "#35c991",
+    "borderColor": "#d7fff0",
     "borderWidth": 3,
     "width": 32,
     "height": 32
