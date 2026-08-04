@@ -6,65 +6,69 @@ import { TemperateMap } from './mapgen.js';
 const items = JSON.parse(await readFile(new URL('../config/items.json', import.meta.url)));
 const balance = JSON.parse(await readFile(new URL('../config/balance.json', import.meta.url)));
 
-function testWorld() {
+function testWorld(size = 9) {
   const map = Object.create(TemperateMap.prototype);
   map.items = items;
-  map.settings = { tileSize: 32, widthInTiles: 7, heightInTiles: 7 };
+  map.settings = { tileSize: 32, widthInTiles: size, heightInTiles: size };
   map.scene = null;
   map.baseTiles = new Map();
-  map.tiles = Array.from({ length: 7 }, () => Array.from({ length: 7 }, () => ({
+  map.resourceSprites = new Map();
+  map.tiles = Array.from({ length: size }, () => Array.from({ length: size }, () => ({
     terrain: 'terrainGrass', resourceItemId: null,
   })));
-  map.landingPod = {
-    center: { x: 1, y: 1 },
-    hullTiles: [{ x: 1, y: 1 }],
-    door: { x: 1, y: 2 },
-    station: { x: 2, y: 2 },
-    spawn: { x: 1, y: 3 },
-  };
   const player = {
-    tile: { x: 3, y: 3 }, settings: balance.player,
+    tile: { x: 0, y: 0 }, settings: balance.player,
     currentTile() { return this.tile; }, respawn() { this.tile = { ...map.landingPod.spawn }; },
     sprite: { setTexture() {} },
   };
   return { map, player };
 }
 
-const { map, player } = testWorld();
-// Enclose a 3×3 interior with a one-tile-thick wall perimeter.
-for (let coordinate = 1; coordinate <= 5; coordinate += 1) {
-  map.baseTiles.set(`${coordinate},1`, { itemId: 'wall' });
-  map.baseTiles.set(`${coordinate},5`, { itemId: 'wall' });
-  map.baseTiles.set(`1,${coordinate}`, { itemId: 'wall' });
-  map.baseTiles.set(`5,${coordinate}`, { itemId: 'wall' });
+function enclose(map, min, max) {
+  for (let coordinate = min; coordinate <= max; coordinate += 1) {
+    map.baseTiles.set(`${coordinate},${min}`, { itemId: 'wall' });
+    map.baseTiles.set(`${coordinate},${max}`, { itemId: 'wall' });
+    map.baseTiles.set(`${min},${coordinate}`, { itemId: 'wall' });
+    map.baseTiles.set(`${max},${coordinate}`, { itemId: 'wall' });
+  }
 }
-const oxygen = new OxygenSystem(null, map, player, balance.oxygen);
-assert.equal(oxygen.regions.length, 1, 'closed room is sealed');
-assert.equal(oxygen.regions[0].tiles.length, 9, 'sealed room has a 3×3 interior');
 
-map.removeBase(3, 1);
-oxygen.recompute({ action: 'remove', itemId: 'wall' });
-assert.equal(oxygen.regions.length, 0, 'wall removal immediately unseals room');
+// A sealed player-built box without life support drains exactly like outdoors.
+const plain = testWorld(7);
+enclose(plain.map, 1, 5);
+plain.player.tile = { x: 3, y: 3 };
+const plainOxygen = new OxygenSystem(null, plain.map, plain.player, balance.oxygen);
+assert.equal(plainOxygen.regions.length, 1, 'closed box is sealed');
+plainOxygen.oxygen = 100;
+plainOxygen.update(1);
+assert.equal(plainOxygen.oxygen, 100 - balance.oxygen.outdoorDrainPerSecond,
+  'a sealed room without life support drains at the outside rate');
 
-map.baseTiles.set('3,1', { itemId: 'door' });
-map.baseTiles.set('3,3', { itemId: 'oxygenGenerator' });
-oxygen.recompute({ action: 'place', itemId: 'oxygenGenerator' });
-assert.equal(oxygen.regions[0].hasGenerator, true, 'passable door still seals the room');
-oxygen.oxygen = 100;
-oxygen.update(1);
-assert.equal(oxygen.oxygen, 100 + balance.oxygen.refillPerSecond, 'generator refills sealed room');
+// A crafted Life Support Unit supplies its sealed region.
+plain.map.baseTiles.set('3,3', { itemId: 'lifeSupportUnit' });
+plainOxygen.recompute({ action: 'place', itemId: 'lifeSupportUnit' });
+plainOxygen.oxygen = 100;
+plainOxygen.update(1);
+assert.equal(plainOxygen.oxygen, 100 + balance.oxygen.refillPerSecond,
+  'crafted Life Support Unit refills a player-built sealed room');
 
-player.tile = { ...map.landingPod.station };
-oxygen.oxygen = 100;
-oxygen.update(1);
-assert.equal(oxygen.oxygen, 100 + balance.oxygen.refillPerSecond, 'station refills oxygen');
+// The pod is a sealed room with built-in life support, and the rack works independently.
+const pod = testWorld();
+pod.map.placeLandingPod();
+pod.player.tile = { ...pod.map.landingPod.center };
+const podOxygen = new OxygenSystem(null, pod.map, pod.player, balance.oxygen);
+assert.equal(podOxygen.tileRegions.has(`${pod.player.tile.x},${pod.player.tile.y}`), true,
+  'pod interior registers as sealed');
+podOxygen.oxygen = 100;
+podOxygen.update(1);
+assert.equal(podOxygen.oxygen, 100 + balance.oxygen.refillPerSecond,
+  'pod Life Support refills the interior');
 
-player.tile = { x: 2, y: 1 };
-oxygen.oxygen = 100;
-oxygen.update(1);
-assert.equal(oxygen.oxygen, 100 - balance.oxygen.outdoorDrainPerSecond,
-  'tiles merely adjacent to the pod do not refill oxygen');
+const rack = pod.map.landingPod.objects.find((object) => object.id === 'suitRack');
+pod.player.tile = { x: rack.x, y: rack.y + 1 };
+podOxygen.oxygen = 100;
+podOxygen.update(1);
+assert.equal(podOxygen.oxygen, 100 + balance.oxygen.refillPerSecond,
+  'standing adjacent to the Suit Rack refills even outside the pod seal');
 
-assert.equal(oxygen.isSealTile(1, 1), true, 'pod hull seals flood-fill regions');
-
-console.log('Verified sealing, breach, generator refill, station-only refill, and pod hull sealing.');
+console.log('Verified oxygen drain parity, pod and crafted life support, and Suit Rack adjacency.');

@@ -17,7 +17,6 @@
   "oxygen": {
     "capacitySeconds": 240,
     "outdoorDrainPerSecond": 1,
-    "sealedDrainPerSecond": 0.25,
     "refillPerSecond": 8,
     "healthDrainPerSecond": 10
   },

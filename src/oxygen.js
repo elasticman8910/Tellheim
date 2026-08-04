@@ -56,7 +56,14 @@ export class OxygenSystem {
       if (!reachesEdge) {
         regions.push({
           tiles,
-          hasGenerator: tiles.some((tile) => this.map.baseAt(tile.x, tile.y) === 'oxygenGenerator'),
+          hasLifeSupport: tiles.some((tile) => this.map.baseAt(tile.x, tile.y) === 'lifeSupportUnit')
+            || tiles.some((tile) => {
+              const object = this.map.podObjectAt?.(tile.x + 1, tile.y)
+                || this.map.podObjectAt?.(tile.x - 1, tile.y)
+                || this.map.podObjectAt?.(tile.x, tile.y + 1)
+                || this.map.podObjectAt?.(tile.x, tile.y - 1);
+              return object?.id === 'lifeSupport';
+            }),
         });
       }
     }
@@ -94,26 +101,24 @@ export class OxygenSystem {
 
   oxygenState() {
     const tile = this.player.currentTile();
-    const atStation = this.map.isRechargeStation?.(tile.x, tile.y);
+    const bySuitRack = this.map.isAdjacentToSuitRack?.(tile.x, tile.y);
     const region = this.tileRegions.get(`${tile.x},${tile.y}`);
-    if (atStation) return 'station-refill';
-    if (region?.hasGenerator) return 'room-refill';
-    if (region) return 'sealed-drain';
+    if (bySuitRack) return 'suit-rack-refill';
+    if (region?.hasLifeSupport) return 'room-refill';
     return 'outdoor-drain';
   }
 
   update(deltaSeconds) {
     const state = this.oxygenState();
     if (state !== this.state) {
-      if (state === 'station-refill') console.log('Suit recharge station: refill started');
-      if (this.state === 'station-refill') console.log('Suit recharge station: refill stopped');
+      if (state === 'suit-rack-refill') console.log('Suit Rack: refill started');
+      if (this.state === 'suit-rack-refill') console.log('Suit Rack: refill stopped');
       console.log(`Oxygen state: ${this.state || 'start'} -> ${state}`);
       this.state = state;
       this.player.sprite?.setTexture?.(state.endsWith('refill') ? 'playerNoHelmet' : 'player');
     }
     if (state.endsWith('refill')) this.oxygen += this.settings.refillPerSecond * deltaSeconds;
-    else this.oxygen -= (state === 'sealed-drain' ? this.settings.sealedDrainPerSecond
-      : this.settings.outdoorDrainPerSecond) * deltaSeconds;
+    else this.oxygen -= this.settings.outdoorDrainPerSecond * deltaSeconds;
     this.oxygen = Math.max(0, Math.min(this.settings.capacitySeconds, this.oxygen));
     if (this.oxygen === 0) this.health -= this.settings.healthDrainPerSecond * deltaSeconds;
     if (this.health <= 0) {

@@ -56,22 +56,37 @@ export class TemperateMap {
     this.placeLandingPod();
   }
 
-  // The five-tile pod has a solid center and three solid arms, with its south arm as a door.
+  // The pod is a cornerless 5x5 ring surrounding a 3x3 floor. Its south door
+  // is the only route into the walkable plus between the four solid stations.
   placeLandingPod() {
     const center = this.findPodCenter();
-    const hullTiles = [
-      center,
-      { x: center.x - 1, y: center.y },
-      { x: center.x + 1, y: center.y },
-      { x: center.x, y: center.y - 1 },
+    const door = { x: center.x, y: center.y + 2 };
+    const hullTiles = [];
+    for (let offset = -1; offset <= 1; offset += 1) {
+      hullTiles.push({ x: center.x + offset, y: center.y - 2 });
+      if (offset !== 0) hullTiles.push({ x: center.x + offset, y: center.y + 2 });
+      hullTiles.push({ x: center.x - 2, y: center.y + offset });
+      hullTiles.push({ x: center.x + 2, y: center.y + offset });
+    }
+    const floorTiles = [];
+    for (let y = center.y - 1; y <= center.y + 1; y += 1) {
+      for (let x = center.x - 1; x <= center.x + 1; x += 1) floorTiles.push({ x, y });
+    }
+    const objects = [
+      { id: 'suitRack', name: 'Suit Rack', texture: 'podSuitRack', x: center.x - 1, y: center.y + 1 },
+      { id: 'thermalControl', name: 'Thermal Control', texture: 'podThermalControl', x: center.x - 1, y: center.y - 1 },
+      { id: 'highCapacityBattery', name: 'High-Capacity Battery', texture: 'podBattery', x: center.x + 1, y: center.y - 1 },
+      { id: 'lifeSupport', name: 'Life Support', texture: 'podLifeSupport', x: center.x + 1, y: center.y + 1 },
     ];
-    const door = { x: center.x, y: center.y + 1 };
-    const station = { x: center.x + 1, y: center.y + 1 };
-    const spawn = { x: center.x, y: center.y + 2 };
-    this.landingPod = { center, hullTiles, door, station, spawn };
+    const spawn = { x: center.x, y: center.y + 3 };
+    this.landingPod = { center, hullTiles, door, floorTiles, objects, spawn };
+    const emptyCorners = [
+      { x: center.x - 2, y: center.y - 2 }, { x: center.x + 2, y: center.y - 2 },
+      { x: center.x - 2, y: center.y + 2 }, { x: center.x + 2, y: center.y + 2 },
+    ];
 
     // Flatten the complete footprint and door approach so every seed starts safely.
-    [...hullTiles, door, station, spawn].forEach(({ x, y }) => {
+    [...hullTiles, door, ...floorTiles, ...objects, ...emptyCorners, spawn].forEach(({ x, y }) => {
       this.removeResource(x, y);
       this.removeBase(x, y);
       this.tiles[y][x].terrain = 'terrainGrass';
@@ -82,9 +97,13 @@ export class TemperateMap {
       );
     });
     const size = this.settings.tileSize;
+    floorTiles.forEach(({ x, y }) => this.addPodSprite(x, y, 'podFloor', size));
     hullTiles.forEach(({ x, y }) => this.addPodSprite(x, y, 'landingPodHull', size));
     this.addPodSprite(door.x, door.y, 'landingPodDoor', size);
-    this.addPodSprite(station.x, station.y, 'suitRechargeStation', size);
+    objects.forEach((object) => {
+      this.addPodSprite(object.x, object.y, object.texture, size);
+      console.log(`Landing pod station: ${object.name} at (${object.x}, ${object.y})`);
+    });
   }
 
   addPodSprite(x, y, texture, size) {
@@ -99,18 +118,25 @@ export class TemperateMap {
     return this.landingPod?.door.x === x && this.landingPod?.door.y === y;
   }
 
-  isRechargeStation(x, y) {
-    return this.landingPod?.station.x === x && this.landingPod?.station.y === y;
+  podObjectAt(x, y) {
+    return this.landingPod?.objects.find((object) => object.x === x && object.y === y) || null;
+  }
+
+  isAdjacentToSuitRack(x, y) {
+    const rack = this.landingPod?.objects.find((object) => object.id === 'suitRack');
+    return Boolean(rack) && Math.abs(rack.x - x) + Math.abs(rack.y - y) === 1;
   }
 
   isLandingPod(x, y) {
-    return this.isPodHull(x, y) || this.isPodDoor(x, y) || this.isRechargeStation(x, y);
+    return this.isPodHull(x, y) || this.isPodDoor(x, y) || Boolean(this.podObjectAt(x, y))
+      || this.landingPod?.floorTiles.some((tile) => tile.x === x && tile.y === y) || false;
   }
 
   isWalkable(x, y) {
     const baseItemId = this.baseAt(x, y);
     return Boolean(this.tiles[y]?.[x]) && this.tiles[y][x].terrain !== 'terrainWater'
-      && !this.isPodHull(x, y) && !this.items[baseItemId]?.blocksMovement;
+      && !this.isPodHull(x, y) && !this.podObjectAt(x, y)
+      && !this.items[baseItemId]?.blocksMovement;
   }
 
   baseAt(x, y) {
@@ -158,10 +184,10 @@ export class TemperateMap {
   findPodCenter() {
     const centerX = Math.floor(this.settings.widthInTiles / 2);
     const centerY = Math.floor(this.settings.heightInTiles / 2);
-    // Keeping two clear rows below the center leaves room for the door and player spawn.
+    // Leave room for the five-tile footprint and the outside spawn below its door.
     return {
-      x: Math.max(1, Math.min(this.settings.widthInTiles - 2, centerX)),
-      y: Math.max(1, Math.min(this.settings.heightInTiles - 3, centerY)),
+      x: Math.max(2, Math.min(this.settings.widthInTiles - 3, centerX)),
+      y: Math.max(2, Math.min(this.settings.heightInTiles - 4, centerY)),
     };
   }
 
