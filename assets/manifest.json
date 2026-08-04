@@ -62,16 +62,28 @@
     "height": 32
   },
   "podThermalControl": {
-    "type": "generated", "color": "#e8793e", "borderColor": "#ffd0ac", "borderWidth": 3,
-    "width": 32, "height": 32
+    "type": "generated",
+    "color": "#e8793e",
+    "borderColor": "#ffd0ac",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
   },
   "podBattery": {
-    "type": "generated", "color": "#d8b83e", "borderColor": "#fff1a6", "borderWidth": 3,
-    "width": 32, "height": 32
+    "type": "generated",
+    "color": "#d8b83e",
+    "borderColor": "#fff1a6",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
   },
   "podLifeSupport": {
-    "type": "generated", "color": "#36c9d6", "borderColor": "#d9ffff", "borderWidth": 3,
-    "width": 32, "height": 32
+    "type": "generated",
+    "color": "#36c9d6",
+    "borderColor": "#d9ffff",
+    "borderWidth": 3,
+    "width": 32,
+    "height": 32
   },
   "sealedTint": {
     "type": "generated",
@@ -174,6 +186,14 @@
     "color": "#ffc247",
     "borderColor": "#704b00",
     "borderWidth": 3,
+    "width": 32,
+    "height": 32
+  },
+  "debugMissingTextureMagenta": {
+    "type": "generated",
+    "color": "#ff00ff",
+    "borderColor": "#ffffff",
+    "borderWidth": 4,
     "width": 32,
     "height": 32
   }

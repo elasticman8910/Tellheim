@@ -1,3 +1,5 @@
+import { AssetRegistry } from './assets.js';
+
 // Builds the same Temperate landscape every time from the configured text seed.
 export class TemperateMap {
   constructor(scene, settings, items, resourceSettings = {}) {
@@ -49,7 +51,7 @@ export class TemperateMap {
           const resourceSprite = this.scene.add.image(
             x * tileSize + tileSize / 2,
             y * tileSize + tileSize / 2,
-            this.items[resource].spriteKey,
+            this.textureForItem(resource, `resource ${resource} at ${x},${y}`),
           ).setDepth(1);
           this.resourceSprites.set(`${x},${y}`, resourceSprite);
         }
@@ -114,7 +116,7 @@ export class TemperateMap {
   }
 
   addPodSprite(x, y, texture, size) {
-    return this.scene?.add?.image(x * size + size / 2, y * size + size / 2, texture)?.setDepth(1);
+    return this.scene?.add?.image(x * size + size / 2, y * size + size / 2, AssetRegistry.resolveTextureKey(this.scene, texture, `pod ${texture} at ${x},${y}`))?.setDepth(1);
   }
 
   isPodHull(x, y) {
@@ -164,9 +166,9 @@ export class TemperateMap {
     const item = this.items[itemId];
     if (!item?.placeable || !this.tiles[y]?.[x] || this.tiles[y][x].terrain === 'terrainWater'
       || this.resourceAt(x, y) || this.baseTiles.has(key) || this.isLandingPod(x, y)) return false;
-    const size = this.settings.tileSize;
+    const size = this.settings?.tileSize || 32;
     const sprite = this.scene?.add?.image
-      ? this.scene.add.image(x * size + size / 2, y * size + size / 2, item.spriteKey).setDepth(1)
+      ? this.scene.add.image(x * size + size / 2, y * size + size / 2, this.textureForItem(itemId, `structure ${itemId} at ${x},${y}`)).setDepth(1)
       : null;
     this.baseTiles.set(key, { itemId, sprite });
     return true;
@@ -232,7 +234,7 @@ export class TemperateMap {
 
   updateResourceAppearance(x, y) {
     const tile = this.tiles[y]?.[x];
-    const sprite = this.resourceSprites.get(`${x},${y}`);
+    const sprite = this.ensureResourceSprite(x, y);
     if (!tile || !sprite) return;
     if (tile.remainingYield <= 0) {
       sprite.setScale?.(0.55);
@@ -257,6 +259,39 @@ export class TemperateMap {
       this.updateResourceAppearance(x, y);
       console.log(`Resource regrew: ${tile.resourceItemId} at (${x}, ${y}), yield ${tile.totalYield}`);
     }));
+  }
+
+  textureForItem(itemId, context = itemId) {
+    return AssetRegistry.resolveTextureKey(this.scene, this.items[itemId]?.spriteKey, context);
+  }
+
+  ensureResourceSprite(x, y) {
+    const tile = this.tiles[y]?.[x];
+    if (!tile?.resourceItemId) return null;
+    const key = `${x},${y}`;
+    const existing = this.resourceSprites.get(key);
+    if (existing) {
+      existing.setTexture?.(this.textureForItem(tile.resourceItemId, `resource ${tile.resourceItemId} at ${key}`));
+      return existing;
+    }
+    if (!this.scene?.add?.image) return null;
+    const size = this.settings?.tileSize || 32;
+    const sprite = this.scene.add.image(
+      x * size + size / 2, y * size + size / 2,
+      this.textureForItem(tile.resourceItemId, `resource ${tile.resourceItemId} at ${key}`),
+    ).setDepth(1);
+    if (sprite) this.resourceSprites.set(key, sprite);
+    return sprite;
+  }
+
+  validatePlacedTextures() {
+    this.tiles.forEach((row, y) => row.forEach((tile, x) => {
+      if (tile.resourceItemId) this.textureForItem(tile.resourceItemId, `loaded resource ${tile.resourceItemId} at ${x},${y}`);
+    }));
+    this.baseTiles.forEach(({ itemId }, key) => this.textureForItem(itemId, `loaded structure ${itemId} at ${key}`));
+    this.landingPod?.objects.forEach((object) => {
+      AssetRegistry.resolveTextureKey(this.scene, object.texture, `loaded pod object ${object.id}`);
+    });
   }
 
   restoreResourceNode(x, y, state) {
